@@ -139,7 +139,7 @@ func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Han
 				return
 			}
 
-			acl, ok := acl.Get(req)
+			acl, ok := acl.get(req)
 			if !ok {
 				eh(r, w, proto.ErrUnauthorized.WithCausef("rpc method not found"))
 				return
