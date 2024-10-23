@@ -3,13 +3,17 @@ package authcontrol
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/0xsequence/authcontrol/proto"
 )
 
-func defaultErrHandler(r *http.Request, w http.ResponseWriter, err error) {
+type ErrHandler func(r *http.Request, w http.ResponseWriter, err error)
+
+func DefaultErrorHandler(r *http.Request, w http.ResponseWriter, err error) {
 	rpcErr, ok := err.(proto.WebRPCError)
 	if !ok {
 		rpcErr = proto.ErrWebrpcEndpoint.WithCause(err)
@@ -32,13 +36,13 @@ type UserStore interface {
 // map[service]map[method]T
 type Config[T any] map[string]map[string]T
 
-// returns the config value for the given request.
-func (c Config[T]) Get(r *rcpRequest) (v T, ok bool) {
+// Get returns the config value for the given request.
+func (c Config[T]) Get(r *Request) (v T, ok bool) {
 	if c == nil {
 		return v, false
 	}
 
-	methodCfg, ok := c[r.serviceName][r.methodName]
+	methodCfg, ok := c[r.ServiceName][r.MethodName]
 	if !ok {
 		return v, false
 	}
@@ -46,31 +50,31 @@ func (c Config[T]) Get(r *rcpRequest) (v T, ok bool) {
 	return methodCfg, true
 }
 
-// rcpRequest is a parsed RPC request.
-type rcpRequest struct {
-	packageName string
-	serviceName string
-	methodName  string
+// Request is a parsed RPC request.
+type Request struct {
+	PackageName string
+	ServiceName string
+	MethodName  string
 }
 
 // newRequest parses a path into an rcpRequest.
-func newRequest(path string) *rcpRequest {
+func ParseRequest(path string) *Request {
 	p := strings.Split(path, "/")
 	if len(p) < 4 {
 		return nil
 	}
 
-	t := &rcpRequest{
-		packageName: p[len(p)-3],
-		serviceName: p[len(p)-2],
-		methodName:  p[len(p)-1],
+	r := &Request{
+		PackageName: p[len(p)-3],
+		ServiceName: p[len(p)-2],
+		MethodName:  p[len(p)-1],
 	}
 
-	if t.packageName != "rpc" {
+	if r.PackageName != "rpc" {
 		return nil
 	}
 
-	return t
+	return r
 }
 
 // ACL is a list of session types, encoded as a bitfield.
@@ -97,4 +101,22 @@ func (a ACL) And(session ...proto.SessionType) ACL {
 // Includes returns true if the ACL includes the given session type.
 func (t ACL) Includes(session proto.SessionType) bool {
 	return t&ACL(1<<session) != 0
+}
+
+func VerifyACL[T any](acl Config[ACL]) error {
+	var t T
+	iType := reflect.TypeOf(&t).Elem()
+	service := iType.Name()
+	m, ok := acl[service]
+	if !ok {
+		return errors.New("service " + service + " not found")
+	}
+	var errList []error
+	for i := 0; i < iType.NumMethod(); i++ {
+		method := iType.Method(i)
+		if _, ok := m[method.Name]; !ok {
+			errList = append(errList, errors.New(""+service+"."+method.Name+" not found"))
+		}
+	}
+	return errors.Join(errList...)
 }

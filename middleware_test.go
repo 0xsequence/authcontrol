@@ -79,18 +79,15 @@ func TestSession(t *testing.T) {
 
 	auth := jwtauth.New("HS256", []byte("secret"), nil)
 
-	options := authcontrol.Options{
-		UserStore: mockStore{
-			UserAddress:  false,
-			AdminAddress: true,
-		},
-		KeyFuncs: []authcontrol.KeyFunc{keyFunc},
+	userStore := mockStore{
+		UserAddress:  false,
+		AdminAddress: true,
 	}
 
 	r := chi.NewRouter()
 	r.Use(
-		authcontrol.Session(auth, &options),
-		authcontrol.AccessControl(ACLConfig, &options),
+		authcontrol.Session(auth, userStore, nil, keyFunc),
+		authcontrol.AccessControl(ACLConfig, nil),
 	)
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 

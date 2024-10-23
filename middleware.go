@@ -10,21 +10,9 @@ import (
 	"github.com/0xsequence/authcontrol/proto"
 )
 
-type Options struct {
-	KeyFuncs   []KeyFunc
-	UserStore  UserStore
-	ErrHandler func(r *http.Request, w http.ResponseWriter, err error)
-}
-
-func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Handler {
-	eh := defaultErrHandler
-	if o != nil && o.ErrHandler != nil {
-		eh = o.ErrHandler
-	}
-
-	var keyFuncs []KeyFunc
-	if o != nil {
-		keyFuncs = o.KeyFuncs
+func Session(auth *jwtauth.JWTAuth, u UserStore, eh ErrHandler, keyFuncs ...KeyFunc) func(next http.Handler) http.Handler {
+	if eh == nil {
+		eh = DefaultErrorHandler
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -82,8 +70,8 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 					ctx = withAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
 
-					if o != nil && o.UserStore != nil {
-						user, isAdmin, err := o.UserStore.GetUser(ctx, accountClaim)
+					if u != nil {
+						user, isAdmin, err := u.GetUser(ctx, accountClaim)
 						if err != nil {
 							eh(r, w, err)
 							return
@@ -124,15 +112,14 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
-func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Handler {
-	eh := defaultErrHandler
-	if o != nil && o.ErrHandler != nil {
-		eh = o.ErrHandler
+func AccessControl(acl Config[ACL], eh ErrHandler) func(next http.Handler) http.Handler {
+	if eh == nil {
+		eh = DefaultErrorHandler
 	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			req := newRequest(r.URL.Path)
+			req := ParseRequest(r.URL.Path)
 			if req == nil {
 				eh(r, w, proto.ErrUnauthorized.WithCausef("invalid rpc method"))
 				return
