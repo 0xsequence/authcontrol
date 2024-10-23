@@ -29,49 +29,48 @@ type UserStore interface {
 }
 
 // Config is a generic map of services/methods to a config value.
+// map[service]map[method]T
 type Config[T any] map[string]map[string]T
 
 // Get returns the config value for the given request.
 func (c Config[T]) Get(r *rcpRequest) (v T, ok bool) {
-	if c == nil || r.Package != "rpc" {
+	if c == nil {
 		return v, false
 	}
-	serviceCfg, ok := c[r.Service]
+
+	methodCfg, ok := c[r.serviceName][r.methodName]
 	if !ok {
 		return v, false
 	}
-	methodCfg, ok := serviceCfg[r.Method]
-	if !ok {
-		return v, false
-	}
+
 	return methodCfg, true
 }
 
 // rcpRequest is a parsed RPC request.
 type rcpRequest struct {
-	Package string
-	Service string
-	Method  string
+	packageName string
+	serviceName string
+	methodName  string
 }
 
 // newRequest parses a path into an rcpRequest.
 func newRequest(path string) *rcpRequest {
-	parts := strings.Split(path, "/")
-	if len(parts) != 4 {
+	p := strings.Split(path, "/")
+	if len(p) < 4 {
 		return nil
 	}
-	if parts[0] != "" {
+
+	t := &rcpRequest{
+		packageName: p[len(p)-3],
+		serviceName: p[len(p)-2],
+		methodName:  p[len(p)-1],
+	}
+
+	if t.packageName != "rpc" {
 		return nil
 	}
-	t := rcpRequest{
-		Package: parts[1],
-		Service: parts[2],
-		Method:  parts[3],
-	}
-	if t.Package == "" || t.Service == "" || t.Method == "" {
-		return nil
-	}
-	return &t
+
+	return t
 }
 
 // ACL is a list of session types, encoded as a bitfield.
@@ -79,20 +78,20 @@ func newRequest(path string) *rcpRequest {
 type ACL uint64
 
 // NewACL returns a new ACL with the given session types.
-func NewACL(t ...proto.SessionType) ACL {
-	var types ACL
-	for _, v := range t {
-		types = types.And(v)
+func NewACL(sessions ...proto.SessionType) ACL {
+	var acl ACL
+	for _, v := range sessions {
+		acl = acl.And(v)
 	}
-	return types
+	return acl
 }
 
 // And returns a new ACL with the given session types added.
-func (t ACL) And(types ...proto.SessionType) ACL {
-	for _, v := range types {
-		t |= 1 << v
+func (a ACL) And(session ...proto.SessionType) ACL {
+	for _, v := range session {
+		a |= 1 << v
 	}
-	return t
+	return a
 }
 
 // Includes returns true if the ACL includes the given session type.

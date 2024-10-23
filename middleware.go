@@ -29,10 +29,13 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
+
+			// check if the request already contains session, if it does then continue
 			if _, ok := GetSessionType(ctx); ok {
 				next.ServeHTTP(w, r)
 				return
 			}
+
 			var (
 				sessionType proto.SessionType
 				accessKey   string
@@ -51,6 +54,7 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 					eh(r, w, proto.ErrSessionExpired)
 					return
 				}
+
 				if !errors.Is(err, jwtauth.ErrNoTokenFound) {
 					eh(r, w, proto.ErrUnauthorized)
 					return
@@ -58,7 +62,7 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 			}
 
 			if token != nil {
-				claims, err := token.AsMap(r.Context())
+				claims, err := token.AsMap(ctx)
 				if err != nil {
 					eh(r, w, err)
 					return
@@ -68,12 +72,13 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 				accountClaim, _ := claims["account"].(string)
 				adminClaim, _ := claims["admin"].(bool)
 				projectClaim, _ := claims["project"].(float64)
+
 				switch {
 				case serviceClaim != "":
-					ctx = WithService(ctx, serviceClaim)
+					ctx = withService(ctx, serviceClaim)
 					sessionType = proto.SessionType_Service
 				case accountClaim != "":
-					ctx = WithAccount(ctx, accountClaim)
+					ctx = withAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
 
 					if o != nil && o.UserStore != nil {
@@ -82,19 +87,19 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 							eh(r, w, err)
 							return
 						}
+
 						if user != nil {
+							ctx = withUser(ctx, user)
+
+							sessionType = proto.SessionType_User
 							if isAdmin {
 								sessionType = proto.SessionType_Admin
-							} else {
-								sessionType = proto.SessionType_User
 							}
-							ctx = WithUser(ctx, user)
 						}
 					}
 
 					if adminClaim {
 						sessionType = proto.SessionType_Admin
-						break
 					}
 
 					if projectClaim > 0 {
@@ -102,14 +107,17 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 						ctx = withProjectID(ctx, projectID)
 						sessionType = proto.SessionType_Project
 					}
+				case adminClaim:
+					sessionType = proto.SessionType_Admin
 				}
 			}
+
 			if accessKey != "" && sessionType < proto.SessionType_Admin {
-				ctx = WithAccessKey(ctx, accessKey)
+				ctx = withAccessKey(ctx, accessKey)
 				sessionType = max(sessionType, proto.SessionType_AccessKey)
 			}
 
-			ctx = WithSessionType(ctx, sessionType)
+			ctx = withSessionType(ctx, sessionType)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -122,6 +130,7 @@ func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Han
 	if o != nil && o.ErrHandler != nil {
 		eh = o.ErrHandler
 	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			req := newRequest(r.URL.Path)
@@ -130,24 +139,23 @@ func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Han
 				return
 			}
 
-			types, ok := acl.Get(req)
+			acl, ok := acl.Get(req)
 			if !ok {
 				eh(r, w, proto.ErrUnauthorized.WithCausef("rpc method not found"))
 				return
 			}
 
-			if session, _ := GetSessionType(r.Context()); !types.Includes(session) {
+			if session, _ := GetSessionType(r.Context()); !acl.Includes(session) {
 				err := proto.ErrPermissionDenied
 				if session == proto.SessionType_Public {
 					err = proto.ErrUnauthorized
 				}
+
 				eh(r, w, err)
 				return
 			}
 
-			ctx := r.Context()
-
-			next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(w, r)
 		})
 	}
 }

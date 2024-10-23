@@ -17,6 +17,7 @@ func mustJWT(t *testing.T, auth *jwtauth.JWTAuth, claims map[string]any) string 
 	if claims == nil {
 		return ""
 	}
+
 	_, token, err := auth.Encode(claims)
 	require.NoError(t, err)
 	return token
@@ -28,11 +29,10 @@ func keyFunc(r *http.Request) string {
 	return r.Header.Get(HeaderKey)
 }
 
-func executeRequest(ctx context.Context, handler http.Handler, path, accessKey, jwt string) (bool, http.Header, error) {
+func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, path, accessKey, jwt string) (bool, error) {
 	req, err := http.NewRequest("POST", path, nil)
-	if err != nil {
-		return false, nil, err
-	}
+	require.NoError(t, err)
+
 	req.Header.Set("X-Real-IP", "127.0.0.1")
 	if accessKey != "" {
 		req.Header.Set(HeaderKey, accessKey)
@@ -46,9 +46,10 @@ func executeRequest(ctx context.Context, handler http.Handler, path, accessKey, 
 
 	if status := rr.Result().StatusCode; status < http.StatusOK || status >= http.StatusBadRequest {
 		w := proto.WebRPCError{}
-		json.Unmarshal(rr.Body.Bytes(), &w)
-		return false, rr.Header(), w
+		err = json.Unmarshal(rr.Body.Bytes(), &w)
+		require.NoError(t, err)
+		return false, w
 	}
 
-	return true, rr.Header(), nil
+	return true, nil
 }

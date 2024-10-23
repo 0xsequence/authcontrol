@@ -8,11 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0xsequence/authcontrol"
-	"github.com/0xsequence/authcontrol/proto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/0xsequence/authcontrol"
+	"github.com/0xsequence/authcontrol/proto"
 )
 
 type mockStore map[string]bool
@@ -54,9 +55,9 @@ func TestSession(t *testing.T) {
 		MethodService   = "MethodService"
 	)
 
-	var Methods = []string{MethodPublic, MethodAccount, MethodAccessKey, MethodProject, MethodUser, MethodAdmin, MethodService}
+	Methods := []string{MethodPublic, MethodAccount, MethodAccessKey, MethodProject, MethodUser, MethodAdmin, MethodService}
 
-	var ACLConfig = authcontrol.Config[authcontrol.ACL]{"Service": {
+	ACLConfig := authcontrol.Config[authcontrol.ACL]{"Service": {
 		MethodPublic:    authcontrol.NewACL(proto.SessionType_Public.OrHigher()...),
 		MethodAccount:   authcontrol.NewACL(proto.SessionType_Wallet.OrHigher()...),
 		MethodAccessKey: authcontrol.NewACL(proto.SessionType_AccessKey.OrHigher()...),
@@ -129,7 +130,7 @@ func TestSession(t *testing.T) {
 						claims = map[string]any{"service": ServiceName}
 					}
 
-					ok, _, err := executeRequest(ctx, r, fmt.Sprintf("/rpc/%s/%s", service, method), tc.AccessKey, mustJWT(t, auth, claims))
+					ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", service, method), tc.AccessKey, mustJWT(t, auth, claims))
 
 					session := tc.Session
 					switch {
@@ -150,6 +151,5 @@ func TestSession(t *testing.T) {
 				})
 			}
 		}
-
 	}
 }
