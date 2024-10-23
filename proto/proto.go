@@ -1,12 +1,8 @@
-//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=golang@v0.15.0 -pkg=proto -server -client -out=./authcontrol.gen.go
-//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=typescript@v0.12.0 -client -out=./clients/authcontrol.gen.ts
+//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=golang@v0.16.0 -pkg=proto -client -out=./authcontrol.gen.go
+//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=typescript@v0.15.0 -client -out=./authcontrol.gen.ts
 package proto
 
 const SessionType_Max SessionType = SessionType_Service + 1
-
-func Ptr[T any](v T) *T {
-	return &v
-}
 
 // AndUp returns a list of all session types from the current one up to the maximum.
 func (s SessionType) OrHigher() []SessionType {

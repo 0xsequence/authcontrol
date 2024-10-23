@@ -23,6 +23,10 @@ var (
 	ctxKeyProjectID   = &contextKey{"ProjectID"}
 )
 
+//
+// Session Type
+//
+
 // WithSessionType adds the access key to the context.
 func WithSessionType(ctx context.Context, accessType proto.SessionType) context.Context {
 	return context.WithValue(ctx, ctxKeySessionType, accessType)
@@ -37,8 +41,12 @@ func GetSessionType(ctx context.Context) (proto.SessionType, bool) {
 	return v, true
 }
 
-// WithAccount adds the account to the context.
-func WithAccount(ctx context.Context, account string) context.Context {
+//
+// Account
+//
+
+// withAccount adds the account to the context.
+func withAccount(ctx context.Context, account string) context.Context {
 	return context.WithValue(ctx, ctxKeyAccount, account)
 }
 
@@ -48,8 +56,12 @@ func GetAccount(ctx context.Context) (string, bool) {
 	return v, ok
 }
 
-// WithUser adds the user to the context.
-func WithUser(ctx context.Context, user any) context.Context {
+//
+// User
+//
+
+// withUser adds the user to the context.
+func withUser(ctx context.Context, user any) context.Context {
 	return context.WithValue(ctx, ctxKeyUser, user)
 }
 
@@ -58,6 +70,10 @@ func GetUser[T any](ctx context.Context) (T, bool) {
 	v, ok := ctx.Value(ctxKeyUser).(T)
 	return v, ok
 }
+
+//
+// Service
+//
 
 // WithService adds the service to the context.
 func WithService(ctx context.Context, service string) context.Context {
@@ -70,8 +86,12 @@ func GetService(ctx context.Context) (string, bool) {
 	return v, ok
 }
 
-// WithAccessKey adds the access key to the context.
-func WithAccessKey(ctx context.Context, accessKey string) context.Context {
+//
+// AccessKey
+//
+
+// withAccessKey adds the access key to the context.
+func withAccessKey(ctx context.Context, accessKey string) context.Context {
 	return context.WithValue(ctx, ctxKeyAccessKey, accessKey)
 }
 
@@ -80,6 +100,10 @@ func GetAccessKey(ctx context.Context) (string, bool) {
 	v, ok := ctx.Value(ctxKeyAccessKey).(string)
 	return v, ok
 }
+
+//
+// Project ID
+//
 
 // withProjectID adds the projectID to the context.
 func withProjectID(ctx context.Context, projectID uint64) context.Context {
