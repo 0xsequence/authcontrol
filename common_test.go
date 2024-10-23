@@ -7,9 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/0xsequence/authcontrol/proto"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/stretchr/testify/require"
+
+	"github.com/0xsequence/authcontrol/proto"
 )
 
 func mustJWT(t *testing.T, auth *jwtauth.JWTAuth, claims map[string]any) *string {

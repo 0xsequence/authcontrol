@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0xsequence/authcontrol"
-	"github.com/0xsequence/authcontrol/proto"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/0xsequence/authcontrol"
+	"github.com/0xsequence/authcontrol/proto"
 )
 
 type mockStore map[string]bool
