@@ -104,7 +104,6 @@ func TestSession(t *testing.T) {
 		{Session: proto.SessionType_User},
 		{Session: proto.SessionType_User, Admin: true},
 		{Session: proto.SessionType_Admin},
-		{Session: proto.SessionType_Admin, Admin: true},
 		{Session: proto.SessionType_Admin, AccessKey: AccessKey},
 		{Session: proto.SessionType_Service},
 		{Session: proto.SessionType_Service, AccessKey: AccessKey},
@@ -129,9 +128,6 @@ func TestSession(t *testing.T) {
 						claims = map[string]any{"account": address}
 					case proto.SessionType_Admin:
 						claims = map[string]any{"account": WalletAddress, "admin": true}
-						if tc.Admin {
-							claims = map[string]any{"admin": true}
-						}
 					case proto.SessionType_Service:
 						claims = map[string]any{"service": ServiceName}
 					}

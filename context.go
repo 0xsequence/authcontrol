@@ -27,8 +27,8 @@ var (
 // Session Type
 //
 
-// withSessionType adds the access key to the context.
-func withSessionType(ctx context.Context, accessType proto.SessionType) context.Context {
+// WithSessionType adds the access key to the context.
+func WithSessionType(ctx context.Context, accessType proto.SessionType) context.Context {
 	return context.WithValue(ctx, ctxKeySessionType, accessType)
 }
 
@@ -75,8 +75,8 @@ func GetUser[T any](ctx context.Context) (T, bool) {
 // Service
 //
 
-// withService adds the service to the context.
-func withService(ctx context.Context, service string) context.Context {
+// WithService adds the service to the context.
+func WithService(ctx context.Context, service string) context.Context {
 	return context.WithValue(ctx, ctxKeyService, service)
 }
 

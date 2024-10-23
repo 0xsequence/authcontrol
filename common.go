@@ -33,7 +33,7 @@ type UserStore interface {
 type Config[T any] map[string]map[string]T
 
 // returns the config value for the given request.
-func (c Config[T]) get(r *rcpRequest) (v T, ok bool) {
+func (c Config[T]) Get(r *rcpRequest) (v T, ok bool) {
 	if c == nil {
 		return v, false
 	}

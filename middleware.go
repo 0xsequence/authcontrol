@@ -76,7 +76,7 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 
 				switch {
 				case serviceClaim != "":
-					ctx = withService(ctx, serviceClaim)
+					ctx = WithService(ctx, serviceClaim)
 					sessionType = proto.SessionType_Service
 				case accountClaim != "":
 					ctx = withAccount(ctx, accountClaim)
@@ -108,8 +108,6 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 						ctx = withProjectID(ctx, projectID)
 						sessionType = proto.SessionType_Project
 					}
-				case adminClaim:
-					sessionType = proto.SessionType_Admin
 				}
 			}
 
@@ -118,7 +116,7 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 				sessionType = max(sessionType, proto.SessionType_AccessKey)
 			}
 
-			ctx = withSessionType(ctx, sessionType)
+			ctx = WithSessionType(ctx, sessionType)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -140,7 +138,7 @@ func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Han
 				return
 			}
 
-			acl, ok := acl.get(req)
+			acl, ok := acl.Get(req)
 			if !ok {
 				eh(r, w, proto.ErrUnauthorized.WithCausef("rpc method not found"))
 				return
