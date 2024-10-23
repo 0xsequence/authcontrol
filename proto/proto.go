@@ -4,10 +4,6 @@ package proto
 
 const SessionType_Max SessionType = SessionType_Service + 1
 
-func Ptr[T any](v T) *T {
-	return &v
-}
-
 // AndUp returns a list of all session types from the current one up to the maximum.
 func (s SessionType) OrHigher() []SessionType {
 	list := make([]SessionType, 0, SessionType_Service-s+1)
