@@ -4,10 +4,9 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/0xsequence/authcontrol/proto"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v2/jwt"
-
-	"github.com/0xsequence/authcontrol/proto"
 )
 
 type Options struct {
