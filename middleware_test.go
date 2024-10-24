@@ -79,6 +79,7 @@ func TestSession(t *testing.T) {
 	)
 
 	options := &authcontrol.Options{
+		JWTSecret: secret,
 		UserStore: mockStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -88,7 +89,7 @@ func TestSession(t *testing.T) {
 
 	r := chi.NewRouter()
 	r.Use(
-		authcontrol.Session(secret, options),
+		authcontrol.Session(options),
 		authcontrol.AccessControl(ACLConfig, options),
 	)
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -178,6 +179,7 @@ func TestInvalid(t *testing.T) {
 	)
 
 	options := &authcontrol.Options{
+		JWTSecret: secret,
 		UserStore: mockStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -186,10 +188,9 @@ func TestInvalid(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(
-		authcontrol.Session(secret, options),
-		authcontrol.AccessControl(ACLConfig, options),
-	)
+	r.Use(authcontrol.Session(options))
+	r.Use(authcontrol.AccessControl(ACLConfig, options))
+
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		resp := map[string]any{}
@@ -287,7 +288,8 @@ func TestCustomErrHandler(t *testing.T) {
 		HTTPStatus: 400,
 	}
 
-	options := &authcontrol.Options{
+	opts := &authcontrol.Options{
+		JWTSecret: secret,
 		UserStore: mockStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -306,8 +308,8 @@ func TestCustomErrHandler(t *testing.T) {
 
 	r := chi.NewRouter()
 	r.Use(
-		authcontrol.Session(secret, options),
-		authcontrol.AccessControl(ACLConfig, options),
+		authcontrol.Session(opts),
+		authcontrol.AccessControl(ACLConfig, opts),
 	)
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 

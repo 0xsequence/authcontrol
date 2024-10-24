@@ -11,13 +11,19 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
+type S2SClientConfig struct {
+	Service       string
+	JWTSecret     string
+	DebugRequests bool
+}
+
 // Service-to-service HTTP client for internal communication between Sequence services.
-func S2SClient(serviceName string, jwtSecret string, debugRequests bool) *http.Client {
+func S2SClient(cfg *S2SClientConfig) *http.Client {
 	httpClient := &http.Client{
 		Transport: transport.Chain(http.DefaultTransport,
 			traceid.Transport,
-			transport.SetHeaderFunc("Authorization", s2sAuthHeader(jwtSecret, map[string]any{"service": serviceName})),
-			transport.If(debugRequests, transport.LogRequests(transport.LogOptions{Concise: true, CURL: true})),
+			transport.SetHeaderFunc("Authorization", s2sAuthHeader(cfg.JWTSecret, map[string]any{"service": cfg.Service})),
+			transport.If(cfg.DebugRequests, transport.LogRequests(transport.LogOptions{Concise: true, CURL: true})),
 		),
 	}
 

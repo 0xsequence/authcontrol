@@ -11,17 +11,18 @@ import (
 )
 
 type Options struct {
+	JWTSecret  string
 	KeyFuncs   []KeyFunc
 	UserStore  UserStore
 	ErrHandler ErrHandler
 }
 
-func Session(jwtSecret string, o *Options) func(next http.Handler) http.Handler {
-	auth := jwtauth.New("HS256", []byte(jwtSecret), nil)
+func Session(cfg *Options) func(next http.Handler) http.Handler {
+	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
 
 	eh := errHandler
-	if o != nil && o.ErrHandler != nil {
-		eh = o.ErrHandler
+	if cfg != nil && cfg.ErrHandler != nil {
+		eh = cfg.ErrHandler
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -40,8 +41,8 @@ func Session(jwtSecret string, o *Options) func(next http.Handler) http.Handler 
 				token       jwt.Token
 			)
 
-			if o != nil {
-				for _, f := range o.KeyFuncs {
+			if cfg != nil {
+				for _, f := range cfg.KeyFuncs {
 					if accessKey = f(r); accessKey != "" {
 						break
 					}
@@ -81,8 +82,8 @@ func Session(jwtSecret string, o *Options) func(next http.Handler) http.Handler 
 					ctx = withAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
 
-					if o != nil && o.UserStore != nil {
-						user, isAdmin, err := o.UserStore.GetUser(ctx, accountClaim)
+					if cfg != nil && cfg.UserStore != nil {
+						user, isAdmin, err := cfg.UserStore.GetUser(ctx, accountClaim)
 						if err != nil {
 							eh(r, w, err)
 							return
@@ -123,10 +124,10 @@ func Session(jwtSecret string, o *Options) func(next http.Handler) http.Handler 
 
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
-func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Handler {
+func AccessControl(acl Config[ACL], cfg *Options) func(next http.Handler) http.Handler {
 	eh := errHandler
-	if o != nil && o.ErrHandler != nil {
-		eh = o.ErrHandler
+	if cfg != nil && cfg.ErrHandler != nil {
+		eh = cfg.ErrHandler
 	}
 
 	return func(next http.Handler) http.Handler {
