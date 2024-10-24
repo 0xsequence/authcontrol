@@ -1,8 +1,9 @@
 package authcontrol
 
 import (
-	"maps"
+	"cmp"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/jwtauth/v5"
@@ -12,47 +13,88 @@ import (
 )
 
 type S2SClientConfig struct {
-	Service       string
+	ServiceName   string
 	JWTSecret     string
 	DebugRequests bool
+	Expiration    time.Duration
+}
+
+func (cfg *S2SClientConfig) Validate() error {
+	if cfg.JWTSecret == "" {
+		return ErrEmptyJWTSecret
+	}
+
+	return nil
 }
 
 // Service-to-service HTTP client for internal communication between Sequence services.
-func S2SClient(cfg *S2SClientConfig) *http.Client {
+func S2SClient(cfg *S2SClientConfig) (*http.Client, error) {
+	if cfg == nil {
+		return nil, ErrS2SClientConfigIsNil
+	}
+
+	if cfg.JWTSecret == "" {
+		return nil, ErrEmptyJWTSecret
+	}
+
+	tokenCfg := &S2STokenConfig{
+		JWTSecret:   cfg.JWTSecret,
+		ServiceName: cfg.ServiceName,
+		Expiration:  cfg.Expiration,
+	}
+
 	httpClient := &http.Client{
 		Transport: transport.Chain(http.DefaultTransport,
 			traceid.Transport,
-			transport.SetHeaderFunc("Authorization", s2sAuthHeader(cfg.JWTSecret, map[string]any{"service": cfg.Service})),
+			transport.SetHeaderFunc("Authorization", s2sAuthHeader(tokenCfg)),
 			transport.If(cfg.DebugRequests, transport.LogRequests(transport.LogOptions{Concise: true, CURL: true})),
 		),
 	}
 
-	return httpClient
+	return httpClient, nil
 }
 
-// Create short-lived service-to-service JWT token for internal communication between Sequence services.
-func S2SToken(jwtSecret string, claims map[string]any) string {
-	jwtAuth := jwtauth.New("HS256", []byte(jwtSecret), nil, jwt.WithAcceptableSkew(2*time.Minute))
+func s2sAuthHeader(cfg *S2STokenConfig) func(req *http.Request) string {
+	return func(req *http.Request) string {
+		return "BEARER " + S2SToken(cfg)
+	}
+}
+
+const (
+	defaultExpiration time.Duration = 30 * time.Second
+	acceptableSkew    time.Duration = 2 * time.Minute
+)
+
+type S2STokenConfig struct {
+	JWTSecret   string
+	ServiceName string
+	Expiration  time.Duration
+}
+
+func (cfg *S2STokenConfig) Validate() error {
+	if cfg.JWTSecret == "" {
+		return ErrEmptyJWTSecret
+	}
+
+	return nil
+}
+
+// Create short-lived service-to-service JWT token for internal communication between Sequence services with HS256 algorithm.
+func S2SToken(cfg *S2STokenConfig) string {
+	if cfg == nil {
+		return ""
+	}
+
+	jwtAuth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil, jwt.WithAcceptableSkew(acceptableSkew))
 
 	now := time.Now().UTC()
-
-	c := maps.Clone(claims)
-	if c == nil {
-		c = map[string]any{}
+	claims := map[string]any{
+		"service": cmp.Or(cfg.ServiceName, os.Args[0]),
+		"iat":     now,
+		"exp":     now.Add(cmp.Or(cfg.Expiration, defaultExpiration)),
 	}
 
-	c["iat"] = now
+	_, t, _ := jwtAuth.Encode(claims)
 
-	if _, ok := c["exp"]; !ok {
-		c["exp"] = now.Add(30 * time.Second)
-	}
-
-	_, t, _ := jwtAuth.Encode(c)
 	return t
-}
-
-func s2sAuthHeader(jwtSecret string, claims map[string]any) func(req *http.Request) string {
-	return func(req *http.Request) string {
-		return "BEARER " + S2SToken(jwtSecret, claims)
-	}
 }

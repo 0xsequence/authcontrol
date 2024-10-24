@@ -21,7 +21,7 @@ func keyFunc(r *http.Request) string {
 	return r.Header.Get(HeaderKey)
 }
 
-func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, path, accessKey string, jwt string) (bool, error) {
+func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, path, accessKey string, jwt *string) (bool, error) {
 	req, err := http.NewRequest("POST", path, nil)
 	require.NoError(t, err)
 
@@ -30,8 +30,8 @@ func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, pat
 		req.Header.Set(HeaderKey, accessKey)
 	}
 
-	if jwt != "" {
-		req.Header.Set("Authorization", "Bearer "+jwt)
+	if jwt != nil {
+		req.Header.Set("Authorization", "Bearer "+*jwt)
 	}
 
 	rr := httptest.NewRecorder()
