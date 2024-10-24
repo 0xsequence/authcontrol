@@ -10,6 +10,12 @@ import (
 	"github.com/0xsequence/authcontrol/proto"
 )
 
+type Options struct {
+	KeyFuncs   []KeyFunc
+	UserStore  UserStore
+	ErrHandler ErrHandler
+}
+
 func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Handler {
 	eh := errHandler
 	if o != nil && o.ErrHandler != nil {

@@ -11,12 +11,6 @@ import (
 	"github.com/0xsequence/authcontrol/proto"
 )
 
-type Options struct {
-	UserStore  UserStore
-	KeyFuncs   []KeyFunc
-	ErrHandler ErrHandler
-}
-
 type ErrHandler func(r *http.Request, w http.ResponseWriter, err error)
 
 func errHandler(r *http.Request, w http.ResponseWriter, err error) {
