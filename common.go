@@ -39,7 +39,7 @@ type Config[T any] map[string]map[string]T
 // Get returns the config value for the given request.
 func (c Config[T]) Get(path string) (v T, err error) {
 	if c == nil {
-		return v, fmt.Errorf("cofig is nil")
+		return v, fmt.Errorf("config is nil")
 	}
 
 	p := strings.Split(path, "/")
@@ -65,13 +65,13 @@ func (c Config[T]) Get(path string) (v T, err error) {
 	return v, nil
 }
 
-// VerifyACL checks that the given ACL config is valid for the given service.
+// Verify checks that the given config is valid for the given service.
 // It can be used in unit tests to ensure that all methods are covered.
-func (acl Config[any]) VerifyACL(webrpcServices map[string][]string) error {
+func (c Config[any]) Verify(webrpcServices map[string][]string) error {
 	var errList []error
 	for service, methods := range webrpcServices {
 		for _, method := range methods {
-			if _, ok := acl[service][method]; !ok {
+			if _, ok := c[service][method]; !ok {
 				errList = append(errList, fmt.Errorf("%s.%s not found", service, method))
 			}
 		}
