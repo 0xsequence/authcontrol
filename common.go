@@ -109,6 +109,8 @@ func (t ACL) Includes(session proto.SessionType) bool {
 	return t&ACL(1<<session) != 0
 }
 
+// VerifyACL checks that the given ACL config is valid for the given service.
+// It can be used in unit tests to ensure that all methods are covered.
 func VerifyACL[T any](acl Config[ACL]) error {
 	var t T
 	iType := reflect.TypeOf(&t).Elem()
