@@ -47,7 +47,7 @@ func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, pat
 	return true, nil
 }
 
-func TestVerifyACL(t *testing.T) {
+func TestVerify(t *testing.T) {
 	services := map[string][]string{
 		"Service1": {
 			"Method1",
@@ -71,7 +71,7 @@ func TestVerifyACL(t *testing.T) {
 		},
 	}
 
-	err := acl.VerifyACL(services)
+	err := acl.Verify(services)
 	assert.NoError(t, err)
 
 	// Wrong Service
@@ -86,7 +86,7 @@ func TestVerifyACL(t *testing.T) {
 		},
 	}
 
-	err = acl.VerifyACL(services)
+	err = acl.Verify(services)
 	require.Error(t, err)
 
 	expectedErrors := []error{
@@ -106,7 +106,7 @@ func TestVerifyACL(t *testing.T) {
 		},
 	}
 
-	err = acl.VerifyACL(services)
+	err = acl.Verify(services)
 	require.Error(t, err)
 
 	expectedErrors = []error{
