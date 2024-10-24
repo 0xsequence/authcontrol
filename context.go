@@ -110,9 +110,9 @@ func withProjectID(ctx context.Context, project uint64) context.Context {
 	return context.WithValue(ctx, ctxKeyProjectID, project)
 }
 
-// GetProjectid returns the project and if its active from the context.
+// GetProjectID returns the project and if its active from the context.
 // In case its not set, it will return 0.
-func GetProjectid(ctx context.Context) (uint64, bool) {
+func GetProjectID(ctx context.Context) (uint64, bool) {
 	v, ok := ctx.Value(ctxKeyProjectID).(uint64)
 	return v, ok
 }
