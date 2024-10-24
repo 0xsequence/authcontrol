@@ -37,14 +37,14 @@ type UserStore interface {
 type Config[T any] map[string]map[string]T
 
 // Get returns the config value for the given request.
-func (c Config[T]) Get(path string) (*T, error) {
+func (c Config[T]) Get(path string) (v T, err error) {
 	if c == nil {
-		return nil, fmt.Errorf("cofig is nil")
+		return v, fmt.Errorf("cofig is nil")
 	}
 
 	p := strings.Split(path, "/")
 	if len(p) < 4 {
-		return nil, fmt.Errorf("path has not enough parts")
+		return v, fmt.Errorf("path has not enough parts")
 	}
 
 	var (
@@ -54,15 +54,15 @@ func (c Config[T]) Get(path string) (*T, error) {
 	)
 
 	if packageName != "rpc" {
-		return nil, fmt.Errorf("path doesn't include rpc")
+		return v, fmt.Errorf("path doesn't include rpc")
 	}
 
-	methodCfg, ok := c[serviceName][methodName]
+	v, ok := c[serviceName][methodName]
 	if !ok {
-		return nil, fmt.Errorf("acl not found")
+		return v, fmt.Errorf("acl not found")
 	}
 
-	return &methodCfg, nil
+	return v, nil
 }
 
 // VerifyACL checks that the given ACL config is valid for the given service.
