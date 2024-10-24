@@ -129,15 +129,9 @@ func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Han
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			req := ParseRequest(r.URL.Path)
-			if req == nil {
-				eh(r, w, proto.ErrUnauthorized.WithCausef("invalid rpc method"))
-				return
-			}
-
-			acl, ok := acl.Get(req)
-			if !ok {
-				eh(r, w, proto.ErrUnauthorized.WithCausef("rpc method not found"))
+			acl, err := acl.Get(r.URL.Path)
+			if err != nil {
+				eh(r, w, proto.ErrUnauthorized.WithCausef("get acl: %w", err))
 				return
 			}
 

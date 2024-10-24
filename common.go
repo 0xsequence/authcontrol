@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 
 	"github.com/0xsequence/authcontrol/proto"
@@ -37,44 +37,47 @@ type UserStore interface {
 type Config[T any] map[string]map[string]T
 
 // Get returns the config value for the given request.
-func (c Config[T]) Get(r *WebRPCRequest) (v T, ok bool) {
+func (c Config[T]) Get(path string) (*T, error) {
 	if c == nil {
-		return v, false
+		return nil, fmt.Errorf("cofig is nil")
 	}
 
-	methodCfg, ok := c[r.ServiceName][r.MethodName]
-	if !ok {
-		return v, false
-	}
-
-	return methodCfg, true
-}
-
-// WebRPCRequest is a parsed RPC request.
-type WebRPCRequest struct {
-	PackageName string
-	ServiceName string
-	MethodName  string
-}
-
-// newRequest parses a path into an rcpRequest.
-func ParseRequest(path string) *WebRPCRequest {
 	p := strings.Split(path, "/")
 	if len(p) < 4 {
-		return nil
+		return nil, fmt.Errorf("path has not enough parts")
 	}
 
-	r := &WebRPCRequest{
-		PackageName: p[len(p)-3],
-		ServiceName: p[len(p)-2],
-		MethodName:  p[len(p)-1],
+	var (
+		packageName = p[len(p)-3]
+		serviceName = p[len(p)-2]
+		methodName  = p[len(p)-1]
+	)
+
+	if packageName != "rpc" {
+		return nil, fmt.Errorf("path doesn't include rpc")
 	}
 
-	if r.PackageName != "rpc" {
-		return nil
+	methodCfg, ok := c[serviceName][methodName]
+	if !ok {
+		return nil, fmt.Errorf("acl not found")
 	}
 
-	return r
+	return &methodCfg, nil
+}
+
+// VerifyACL checks that the given ACL config is valid for the given service.
+// It can be used in unit tests to ensure that all methods are covered.
+func (acl Config[any]) VerifyACL(webrpcServices map[string][]string) error {
+	var errList []error
+	for service, methods := range webrpcServices {
+		for _, method := range methods {
+			if _, ok := acl[service][method]; !ok {
+				errList = append(errList, fmt.Errorf("%s.%s not found", service, method))
+			}
+		}
+	}
+
+	return errors.Join(errList...)
 }
 
 // ACL is a list of session types, encoded as a bitfield.
@@ -101,24 +104,4 @@ func (a ACL) And(session ...proto.SessionType) ACL {
 // Includes returns true if the ACL includes the given session type.
 func (t ACL) Includes(session proto.SessionType) bool {
 	return t&ACL(1<<session) != 0
-}
-
-// VerifyACL checks that the given ACL config is valid for the given service.
-// It can be used in unit tests to ensure that all methods are covered.
-func VerifyACL[T any](acl Config[ACL]) error {
-	var t T
-	iType := reflect.TypeOf(&t).Elem()
-	service := iType.Name()
-	m, ok := acl[service]
-	if !ok {
-		return errors.New("service " + service + " not found")
-	}
-	var errList []error
-	for i := 0; i < iType.NumMethod(); i++ {
-		method := iType.Method(i)
-		if _, ok := m[method.Name]; !ok {
-			errList = append(errList, errors.New(""+service+"."+method.Name+" not found"))
-		}
-	}
-	return errors.Join(errList...)
 }
