@@ -11,7 +11,7 @@ import (
 )
 
 func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Handler {
-	eh := DefaultErrorHandler
+	eh := errHandler
 	if o != nil && o.ErrHandler != nil {
 		eh = o.ErrHandler
 	}
@@ -116,7 +116,7 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
 func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Handler {
-	eh := DefaultErrorHandler
+	eh := errHandler
 	if o != nil && o.ErrHandler != nil {
 		eh = o.ErrHandler
 	}

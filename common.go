@@ -19,7 +19,7 @@ type Options struct {
 
 type ErrHandler func(r *http.Request, w http.ResponseWriter, err error)
 
-func DefaultErrorHandler(r *http.Request, w http.ResponseWriter, err error) {
+func errHandler(r *http.Request, w http.ResponseWriter, err error) {
 	rpcErr, ok := err.(proto.WebRPCError)
 	if !ok {
 		rpcErr = proto.ErrWebrpcEndpoint.WithCause(err)
