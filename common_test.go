@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/stretchr/testify/require"
 
+	"github.com/0xsequence/authcontrol"
 	"github.com/0xsequence/authcontrol/proto"
 )
 
@@ -54,4 +55,41 @@ func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, pat
 	}
 
 	return true, nil
+}
+
+func TestVerifyACL(t *testing.T) {
+	type Service interface {
+		Method1() error
+		Method2() error
+		Method3() error
+	}
+
+	err := authcontrol.VerifyACL[Service](nil)
+	require.Error(t, err)
+
+	err = authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
+		"WrongName": {
+			"Method1": authcontrol.NewACL(proto.SessionType_User),
+			"Method2": authcontrol.NewACL(proto.SessionType_User),
+			"Method3": authcontrol.NewACL(proto.SessionType_User),
+		},
+	})
+	require.Error(t, err)
+
+	err = authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
+		"Service": {
+			"Method1": authcontrol.NewACL(proto.SessionType_User),
+			"Method2": authcontrol.NewACL(proto.SessionType_User),
+		},
+	})
+	require.Error(t, err)
+
+	err = authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
+		"Service": {
+			"Method1": authcontrol.NewACL(proto.SessionType_User),
+			"Method2": authcontrol.NewACL(proto.SessionType_User),
+			"Method3": authcontrol.NewACL(proto.SessionType_User),
+		},
+	})
+	require.NoError(t, err)
 }

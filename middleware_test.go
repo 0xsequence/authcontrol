@@ -79,7 +79,7 @@ func TestSession(t *testing.T) {
 
 	auth := jwtauth.New("HS256", []byte("secret"), nil)
 
-	options := authcontrol.Options{
+	options := &authcontrol.Options{
 		UserStore: mockStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -89,8 +89,8 @@ func TestSession(t *testing.T) {
 
 	r := chi.NewRouter()
 	r.Use(
-		authcontrol.Session(auth, &options),
-		authcontrol.AccessControl(ACLConfig, &options),
+		authcontrol.Session(auth, options),
+		authcontrol.AccessControl(ACLConfig, options),
 	)
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
@@ -193,7 +193,17 @@ func TestInvalid(t *testing.T) {
 		authcontrol.Session(auth, options),
 		authcontrol.AccessControl(ACLConfig, options),
 	)
-	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		resp := map[string]any{}
+		resp["accessKey"], _ = authcontrol.GetAccessKey(ctx)
+		resp["account"], _ = authcontrol.GetAccount(ctx)
+		resp["project"], _ = authcontrol.GetProjectID(ctx)
+		resp["service"], _ = authcontrol.GetService(ctx)
+		resp["session"], _ = authcontrol.GetSessionType(ctx)
+		resp["user"], _ = authcontrol.GetUser[any](ctx)
+		assert.NoError(t, json.NewEncoder(w).Encode(resp))
+	}))
 
 	// Without JWT
 	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, nil)

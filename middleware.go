@@ -13,18 +13,13 @@ import (
 type Options struct {
 	KeyFuncs   []KeyFunc
 	UserStore  UserStore
-	ErrHandler func(r *http.Request, w http.ResponseWriter, err error)
+	ErrHandler ErrHandler
 }
 
 func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Handler {
-	eh := defaultErrHandler
+	eh := errHandler
 	if o != nil && o.ErrHandler != nil {
 		eh = o.ErrHandler
-	}
-
-	var keyFuncs []KeyFunc
-	if o != nil {
-		keyFuncs = o.KeyFuncs
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -43,9 +38,11 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 				token       jwt.Token
 			)
 
-			for _, f := range keyFuncs {
-				if accessKey = f(r); accessKey != "" {
-					break
+			if o != nil {
+				for _, f := range o.KeyFuncs {
+					if accessKey = f(r); accessKey != "" {
+						break
+					}
 				}
 			}
 
@@ -125,14 +122,14 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
 func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Handler {
-	eh := defaultErrHandler
+	eh := errHandler
 	if o != nil && o.ErrHandler != nil {
 		eh = o.ErrHandler
 	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			req := newRequest(r.URL.Path)
+			req := ParseRequest(r.URL.Path)
 			if req == nil {
 				eh(r, w, proto.ErrUnauthorized.WithCausef("invalid rpc method"))
 				return

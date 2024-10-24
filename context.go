@@ -105,12 +105,12 @@ func GetAccessKey(ctx context.Context) (string, bool) {
 // Project ID
 //
 
-// withProjectID adds the projectID to the context.
-func withProjectID(ctx context.Context, projectID uint64) context.Context {
-	return context.WithValue(ctx, ctxKeyProjectID, projectID)
+// withProjectID adds the project to the context.
+func withProjectID(ctx context.Context, project uint64) context.Context {
+	return context.WithValue(ctx, ctxKeyProjectID, project)
 }
 
-// GetProjectID returns the projectID and if its active from the context.
+// GetProjectID returns the project and if its active from the context.
 // In case its not set, it will return 0.
 func GetProjectID(ctx context.Context) (uint64, bool) {
 	v, ok := ctx.Value(ctxKeyProjectID).(uint64)
