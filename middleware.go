@@ -102,7 +102,7 @@ func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Han
 
 					if projectClaim > 0 {
 						projectID := uint64(projectClaim)
-						ctx = withProject(ctx, projectID)
+						ctx = withProjectID(ctx, projectID)
 						sessionType = proto.SessionType_Project
 					}
 				}

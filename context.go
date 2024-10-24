@@ -20,7 +20,7 @@ var (
 	ctxKeyUser        = &contextKey{"User"}
 	ctxKeyService     = &contextKey{"Service"}
 	ctxKeyAccessKey   = &contextKey{"AccessKey"}
-	ctxKeyProject     = &contextKey{"Project"}
+	ctxKeyProjectID   = &contextKey{"ProjectID"}
 )
 
 //
@@ -105,14 +105,14 @@ func GetAccessKey(ctx context.Context) (string, bool) {
 // Project ID
 //
 
-// withProject adds the project to the context.
-func withProject(ctx context.Context, project uint64) context.Context {
-	return context.WithValue(ctx, ctxKeyProject, project)
+// withProjectID adds the project to the context.
+func withProjectID(ctx context.Context, project uint64) context.Context {
+	return context.WithValue(ctx, ctxKeyProjectID, project)
 }
 
-// GetProject returns the project and if its active from the context.
+// GetProjectid returns the project and if its active from the context.
 // In case its not set, it will return 0.
-func GetProject(ctx context.Context) (uint64, bool) {
-	v, ok := ctx.Value(ctxKeyProject).(uint64)
+func GetProjectid(ctx context.Context) (uint64, bool) {
+	v, ok := ctx.Value(ctxKeyProjectID).(uint64)
 	return v, ok
 }

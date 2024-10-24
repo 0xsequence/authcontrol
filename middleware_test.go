@@ -198,7 +198,7 @@ func TestInvalid(t *testing.T) {
 		resp := map[string]any{}
 		resp["accessKey"], _ = authcontrol.GetAccessKey(ctx)
 		resp["account"], _ = authcontrol.GetAccount(ctx)
-		resp["project"], _ = authcontrol.GetProject(ctx)
+		resp["project"], _ = authcontrol.GetProjectid(ctx)
 		resp["service"], _ = authcontrol.GetService(ctx)
 		resp["session"], _ = authcontrol.GetSessionType(ctx)
 		resp["user"], _ = authcontrol.GetUser[any](ctx)
