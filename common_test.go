@@ -64,7 +64,10 @@ func TestVerifyACL(t *testing.T) {
 		Method3() error
 	}
 
-	err := authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
+	err := authcontrol.VerifyACL[Service](nil)
+	require.Error(t, err)
+
+	err = authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
 		"WrongName": {
 			"Method1": authcontrol.NewACL(proto.SessionType_User),
 			"Method2": authcontrol.NewACL(proto.SessionType_User),

@@ -193,7 +193,17 @@ func TestInvalid(t *testing.T) {
 		authcontrol.Session(auth, options),
 		authcontrol.AccessControl(ACLConfig, options),
 	)
-	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		resp := map[string]any{}
+		resp["accessKey"], _ = authcontrol.GetAccessKey(ctx)
+		resp["account"], _ = authcontrol.GetAccount(ctx)
+		resp["project"], _ = authcontrol.GetProject(ctx)
+		resp["service"], _ = authcontrol.GetService(ctx)
+		resp["session"], _ = authcontrol.GetSessionType(ctx)
+		resp["user"], _ = authcontrol.GetUser[any](ctx)
+		assert.NoError(t, json.NewEncoder(w).Encode(resp))
+	}))
 
 	// Without JWT
 	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, nil)
