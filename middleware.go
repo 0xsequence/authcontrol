@@ -16,7 +16,9 @@ type Options struct {
 	ErrHandler ErrHandler
 }
 
-func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Handler {
+func Session(jwtSecret string, o *Options) func(next http.Handler) http.Handler {
+	auth := jwtauth.New("HS256", []byte(jwtSecret), nil)
+
 	eh := errHandler
 	if o != nil && o.ErrHandler != nil {
 		eh = o.ErrHandler
