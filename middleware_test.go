@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/0xsequence/authcontrol"
@@ -132,7 +133,9 @@ func TestSession(t *testing.T) {
 						claims = map[string]any{"service": ServiceName}
 					}
 
-					ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", service, method), tc.AccessKey, authcontrol.S2SToken(secret, claims))
+					jwtAuth := jwtauth.New("HS256", []byte(secret), nil)
+					_, jwt, _ := jwtAuth.Encode(claims)
+					ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", service, method), tc.AccessKey, &jwt)
 
 					session := tc.Session
 					switch {
@@ -204,58 +207,64 @@ func TestInvalid(t *testing.T) {
 	}))
 
 	// Without JWT
-	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, "")
+	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, nil)
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
+	jwtAuth := jwtauth.New("HS256", []byte("wrong-secret"), nil)
+	_, jwt, _ := jwtAuth.Encode(nil)
+
 	// Wrong JWT
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, "wrong-secret")
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, &jwt)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
 	claims := map[string]any{"service": "client_service"}
+	jwtAuth = jwtauth.New("HS256", []byte(secret), nil)
+	_, jwt, _ = jwtAuth.Encode(claims)
 
 	// Valid Request
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, authcontrol.S2SToken(secret, claims))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, &jwt)
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid request path with wrong not enough parts in path for valid RPC request
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/%s/%s", ServiceName, MethodName), AccessKey, authcontrol.S2SToken(secret, claims))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/%s/%s", ServiceName, MethodName), AccessKey, &jwt)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
 	// Invalid request path with wrong "rpc"
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/pcr/%s/%s", ServiceName, MethodName), AccessKey, authcontrol.S2SToken(secret, claims))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/pcr/%s/%s", ServiceName, MethodName), AccessKey, &jwt)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
 	// Invalid Service
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), AccessKey, authcontrol.S2SToken(secret, claims))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), AccessKey, &jwt)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
 	// Invalid Method
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), AccessKey, authcontrol.S2SToken(secret, claims))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), AccessKey, &jwt)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
 	// Expired JWT Token
 	claims["exp"] = time.Now().Add(-time.Second).Unix()
-	expiredJWT := authcontrol.S2SToken(secret, claims)
+	jwtAuth = jwtauth.New("HS256", []byte(secret), nil)
+	_, expiredJWT, _ := jwtAuth.Encode(claims)
 
 	// Expired JWT Token valid method
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, expiredJWT)
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, &expiredJWT)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
 
 	// Expired JWT Token invalid service
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), AccessKey, expiredJWT)
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), AccessKey, &expiredJWT)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
 
 	// Expired JWT Token invalid method
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), AccessKey, expiredJWT)
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), AccessKey, &expiredJWT)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
 }
@@ -313,16 +322,17 @@ func TestCustomErrHandler(t *testing.T) {
 	)
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	var claims map[string]any
-	claims = map[string]any{"service": "client_service"}
+	claims := map[string]any{"service": "client_service"}
+	jwtAuth := jwtauth.New("HS256", []byte(secret), nil)
+	_, jwt, _ := jwtAuth.Encode(claims)
 
 	// Valid Request
-	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, authcontrol.S2SToken(secret, claims))
+	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, &jwt)
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid service which should return custom error from overrided ErrHandler
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), AccessKey, authcontrol.S2SToken(secret, claims))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), AccessKey, &jwt)
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, customErr)
 }
