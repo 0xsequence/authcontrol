@@ -3,11 +3,13 @@ package authcontrol_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xsequence/authcontrol"
@@ -58,38 +60,70 @@ func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, pat
 }
 
 func TestVerifyACL(t *testing.T) {
-	type Service interface {
-		Method1() error
-		Method2() error
-		Method3() error
+	services := map[string][]string{
+		"Service1": {
+			"Method1",
+			"Method2",
+			"Method3",
+		},
+		"Service2": {
+			"Method1",
+		},
 	}
 
-	err := authcontrol.VerifyACL[Service](nil)
-	require.Error(t, err)
-
-	err = authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
-		"WrongName": {
+	// Valid ACL config
+	acl := authcontrol.Config[any]{
+		"Service1": {
 			"Method1": authcontrol.NewACL(proto.SessionType_User),
 			"Method2": authcontrol.NewACL(proto.SessionType_User),
 			"Method3": authcontrol.NewACL(proto.SessionType_User),
 		},
-	})
-	require.Error(t, err)
-
-	err = authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
-		"Service": {
+		"Service2": {
 			"Method1": authcontrol.NewACL(proto.SessionType_User),
-			"Method2": authcontrol.NewACL(proto.SessionType_User),
 		},
-	})
-	require.Error(t, err)
+	}
 
-	err = authcontrol.VerifyACL[Service](authcontrol.Config[authcontrol.ACL]{
-		"Service": {
+	err := acl.VerifyACL(services)
+	assert.NoError(t, err)
+
+	// Wrong Service
+	acl = authcontrol.Config[any]{
+		"WrongService1": {
 			"Method1": authcontrol.NewACL(proto.SessionType_User),
 			"Method2": authcontrol.NewACL(proto.SessionType_User),
 			"Method3": authcontrol.NewACL(proto.SessionType_User),
 		},
-	})
-	require.NoError(t, err)
+		"Service2": {
+			"Method1": authcontrol.NewACL(proto.SessionType_User),
+		},
+	}
+
+	err = acl.VerifyACL(services)
+	require.Error(t, err)
+
+	expectedErrors := []error{
+		errors.New("Service1.Method1 not found"),
+		errors.New("Service1.Method2 not found"),
+		errors.New("Service1.Method3 not found"),
+	}
+	assert.Equal(t, errors.Join(expectedErrors...).Error(), err.Error())
+
+	// Wrong Methods
+	acl = authcontrol.Config[any]{
+		"Service1": {
+			"Method1": authcontrol.NewACL(proto.SessionType_User),
+		},
+		"Service2": {
+			"Method1": authcontrol.NewACL(proto.SessionType_User),
+		},
+	}
+
+	err = acl.VerifyACL(services)
+	require.Error(t, err)
+
+	expectedErrors = []error{
+		errors.New("Service1.Method2 not found"),
+		errors.New("Service1.Method3 not found"),
+	}
+	assert.Equal(t, errors.Join(expectedErrors...).Error(), err.Error())
 }
