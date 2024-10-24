@@ -8,10 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/0xsequence/authcontrol"
-	"github.com/0xsequence/authcontrol/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/0xsequence/authcontrol"
+	"github.com/0xsequence/authcontrol/proto"
 )
 
 const HeaderKey = "Test-Key"
