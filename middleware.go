@@ -10,9 +10,10 @@ import (
 	"github.com/0xsequence/authcontrol/proto"
 )
 
-func Session(auth *jwtauth.JWTAuth, u UserStore, eh ErrHandler, keyFuncs ...KeyFunc) func(next http.Handler) http.Handler {
-	if eh == nil {
-		eh = DefaultErrorHandler
+func Session(auth *jwtauth.JWTAuth, o *Options) func(next http.Handler) http.Handler {
+	eh := DefaultErrorHandler
+	if o != nil && o.ErrHandler != nil {
+		eh = o.ErrHandler
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -31,9 +32,11 @@ func Session(auth *jwtauth.JWTAuth, u UserStore, eh ErrHandler, keyFuncs ...KeyF
 				token       jwt.Token
 			)
 
-			for _, f := range keyFuncs {
-				if accessKey = f(r); accessKey != "" {
-					break
+			if o != nil {
+				for _, f := range o.KeyFuncs {
+					if accessKey = f(r); accessKey != "" {
+						break
+					}
 				}
 			}
 
@@ -70,8 +73,8 @@ func Session(auth *jwtauth.JWTAuth, u UserStore, eh ErrHandler, keyFuncs ...KeyF
 					ctx = withAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
 
-					if u != nil {
-						user, isAdmin, err := u.GetUser(ctx, accountClaim)
+					if o != nil && o.UserStore != nil {
+						user, isAdmin, err := o.UserStore.GetUser(ctx, accountClaim)
 						if err != nil {
 							eh(r, w, err)
 							return
@@ -112,9 +115,10 @@ func Session(auth *jwtauth.JWTAuth, u UserStore, eh ErrHandler, keyFuncs ...KeyF
 
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
-func AccessControl(acl Config[ACL], eh ErrHandler) func(next http.Handler) http.Handler {
-	if eh == nil {
-		eh = DefaultErrorHandler
+func AccessControl(acl Config[ACL], o *Options) func(next http.Handler) http.Handler {
+	eh := DefaultErrorHandler
+	if o != nil && o.ErrHandler != nil {
+		eh = o.ErrHandler
 	}
 
 	return func(next http.Handler) http.Handler {

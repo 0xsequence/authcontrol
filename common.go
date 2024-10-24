@@ -11,6 +11,12 @@ import (
 	"github.com/0xsequence/authcontrol/proto"
 )
 
+type Options struct {
+	UserStore  UserStore
+	KeyFuncs   []KeyFunc
+	ErrHandler ErrHandler
+}
+
 type ErrHandler func(r *http.Request, w http.ResponseWriter, err error)
 
 func DefaultErrorHandler(r *http.Request, w http.ResponseWriter, err error) {
@@ -37,7 +43,7 @@ type UserStore interface {
 type Config[T any] map[string]map[string]T
 
 // Get returns the config value for the given request.
-func (c Config[T]) Get(r *Request) (v T, ok bool) {
+func (c Config[T]) Get(r *WebRPCRequest) (v T, ok bool) {
 	if c == nil {
 		return v, false
 	}
@@ -50,21 +56,21 @@ func (c Config[T]) Get(r *Request) (v T, ok bool) {
 	return methodCfg, true
 }
 
-// Request is a parsed RPC request.
-type Request struct {
+// WebRPCRequest is a parsed RPC request.
+type WebRPCRequest struct {
 	PackageName string
 	ServiceName string
 	MethodName  string
 }
 
 // newRequest parses a path into an rcpRequest.
-func ParseRequest(path string) *Request {
+func ParseRequest(path string) *WebRPCRequest {
 	p := strings.Split(path, "/")
 	if len(p) < 4 {
 		return nil
 	}
 
-	r := &Request{
+	r := &WebRPCRequest{
 		PackageName: p[len(p)-3],
 		ServiceName: p[len(p)-2],
 		MethodName:  p[len(p)-1],
