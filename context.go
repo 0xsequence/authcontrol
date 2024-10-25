@@ -45,8 +45,8 @@ func GetSessionType(ctx context.Context) (proto.SessionType, bool) {
 // Account
 //
 
-// withAccount adds the account to the context.
-func withAccount(ctx context.Context, account string) context.Context {
+// WithAccount adds the account to the context.
+func WithAccount(ctx context.Context, account string) context.Context {
 	return context.WithValue(ctx, ctxKeyAccount, account)
 }
 
@@ -90,8 +90,8 @@ func GetService(ctx context.Context) (string, bool) {
 // AccessKey
 //
 
-// withAccessKey adds the access key to the context.
-func withAccessKey(ctx context.Context, accessKey string) context.Context {
+// WithAccessKey adds the access key to the context.
+func WithAccessKey(ctx context.Context, accessKey string) context.Context {
 	return context.WithValue(ctx, ctxKeyAccessKey, accessKey)
 }
 
@@ -105,8 +105,8 @@ func GetAccessKey(ctx context.Context) (string, bool) {
 // Project ID
 //
 
-// withProjectID adds the project to the context.
-func withProjectID(ctx context.Context, project uint64) context.Context {
+// WithProjectID adds the project to the context.
+func WithProjectID(ctx context.Context, project uint64) context.Context {
 	return context.WithValue(ctx, ctxKeyProjectID, project)
 }
 

@@ -79,7 +79,7 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 					ctx = WithService(ctx, serviceClaim)
 					sessionType = proto.SessionType_Service
 				case accountClaim != "":
-					ctx = withAccount(ctx, accountClaim)
+					ctx = WithAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
 
 					if cfg != nil && cfg.UserStore != nil {
@@ -105,14 +105,14 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 
 					if projectClaim > 0 {
 						projectID := uint64(projectClaim)
-						ctx = withProjectID(ctx, projectID)
+						ctx = WithProjectID(ctx, projectID)
 						sessionType = proto.SessionType_Project
 					}
 				}
 			}
 
 			if accessKey != "" && sessionType < proto.SessionType_Admin {
-				ctx = withAccessKey(ctx, accessKey)
+				ctx = WithAccessKey(ctx, accessKey)
 				sessionType = max(sessionType, proto.SessionType_AccessKey)
 			}
 
