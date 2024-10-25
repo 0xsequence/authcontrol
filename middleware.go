@@ -90,7 +90,7 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 						}
 
 						if user != nil {
-							ctx = withUser(ctx, user)
+							ctx = WithUser(ctx, user)
 
 							sessionType = proto.SessionType_User
 							if isAdmin {
