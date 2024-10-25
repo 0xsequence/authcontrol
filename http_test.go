@@ -18,9 +18,9 @@ func TestS2SClient(t *testing.T) {
 	serviceName := "test-service-name"
 
 	cfg := &authcontrol.S2SClientConfig{
-		JWTSecret:   secret,
-		ServiceName: serviceName,
-		Expiration:  10 * time.Second,
+		JWTSecret:       secret,
+		ServiceName:     serviceName,
+		TokenExpiration: 10 * time.Second,
 	}
 
 	err := cfg.Validate()

@@ -219,11 +219,13 @@ func TestInvalid(t *testing.T) {
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
-	claims := map[string]any{"service": "client_service"}
-	jwtAuth = jwtauth.New("HS256", []byte(secret), nil)
-	_, jwt, _ = jwtAuth.Encode(claims)
-
 	// Valid Request
+	cfg := &authcontrol.S2STokenConfig{
+		JWTSecret:   secret,
+		ServiceName: ServiceName,
+	}
+	jwt = authcontrol.S2SToken(cfg)
+
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), AccessKey, &jwt)
 	assert.True(t, ok)
 	assert.NoError(t, err)
@@ -249,6 +251,7 @@ func TestInvalid(t *testing.T) {
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
 	// Expired JWT Token
+	claims := map[string]any{"service": ServiceName}
 	claims["exp"] = time.Now().Add(-time.Second).Unix()
 	jwtAuth = jwtauth.New("HS256", []byte(secret), nil)
 	_, expiredJWT, _ := jwtAuth.Encode(claims)

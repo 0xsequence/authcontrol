@@ -12,11 +12,16 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
+const (
+	defaultExpiration time.Duration = 30 * time.Second
+	acceptableSkew    time.Duration = 2 * time.Minute
+)
+
 type S2SClientConfig struct {
-	ServiceName   string
-	JWTSecret     string
-	DebugRequests bool
-	Expiration    time.Duration
+	ServiceName     string
+	JWTSecret       string
+	DebugRequests   bool
+	TokenExpiration time.Duration
 }
 
 func (cfg *S2SClientConfig) Validate() error {
@@ -40,7 +45,7 @@ func S2SClient(cfg *S2SClientConfig) (*http.Client, error) {
 	tokenCfg := &S2STokenConfig{
 		JWTSecret:   cfg.JWTSecret,
 		ServiceName: cfg.ServiceName,
-		Expiration:  cfg.Expiration,
+		Expiration:  cfg.TokenExpiration,
 	}
 
 	httpClient := &http.Client{
@@ -59,11 +64,6 @@ func s2sAuthHeader(cfg *S2STokenConfig) func(req *http.Request) string {
 		return "BEARER " + S2SToken(cfg)
 	}
 }
-
-const (
-	defaultExpiration time.Duration = 30 * time.Second
-	acceptableSkew    time.Duration = 2 * time.Minute
-)
 
 type S2STokenConfig struct {
 	JWTSecret   string
