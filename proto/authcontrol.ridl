@@ -12,12 +12,6 @@ enum SessionType: uint16
   - Admin
   - Service
 
-enum UserPermission: uint16
-  - UNAUTHORIZED
-  - READ
-  - READ_WRITE
-  - ADMIN
-
 error 1 Unauthorized     "Unauthorized access" HTTP 401
 error 2 PermissionDenied "Permission denied"   HTTP 403
 error 3 SessionExpired   "Session expired"     HTTP 403
