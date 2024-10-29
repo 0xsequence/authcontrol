@@ -28,6 +28,14 @@ type Options struct {
 }
 
 func (o *Options) ApplyDefaults() {
+	// Set default access key functions if not provided.
+	// We intentionally check for nil instead of len == 0 because
+	// if you can pass an empty slice to have no access key defaults.
+	if o.AccessKeyFuncs == nil {
+		o.AccessKeyFuncs = []AccessKeyFunc{AccessKeyFromHeader}
+	}
+
+	// Set default error handler if not provided
 	if o.ErrHandler == nil {
 		o.ErrHandler = errHandler
 	}
