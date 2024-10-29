@@ -26,7 +26,7 @@ func errHandler(r *http.Request, w http.ResponseWriter, err error) {
 	w.Write(respBody)
 }
 
-type KeyFunc func(*http.Request) string
+type AccessKeyFunc func(*http.Request) string
 
 type UserStore interface {
 	GetUser(ctx context.Context, address string) (any, bool, error)

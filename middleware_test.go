@@ -84,7 +84,7 @@ func TestSession(t *testing.T) {
 			UserAddress:  false,
 			AdminAddress: true,
 		},
-		KeyFuncs: []authcontrol.KeyFunc{keyFunc},
+		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
 
 	r := chi.NewRouter()
@@ -184,7 +184,7 @@ func TestInvalid(t *testing.T) {
 			UserAddress:  false,
 			AdminAddress: true,
 		},
-		KeyFuncs: []authcontrol.KeyFunc{keyFunc},
+		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
 
 	r := chi.NewRouter()
@@ -294,7 +294,7 @@ func TestCustomErrHandler(t *testing.T) {
 			UserAddress:  false,
 			AdminAddress: true,
 		},
-		KeyFuncs: []authcontrol.KeyFunc{keyFunc},
+		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 		ErrHandler: func(r *http.Request, w http.ResponseWriter, err error) {
 			rpcErr := customErr
 
