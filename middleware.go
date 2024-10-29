@@ -10,20 +10,32 @@ import (
 	"github.com/0xsequence/authcontrol/proto"
 )
 
+// Options for the authcontrol middleware handlers Session and AccessControl.
 type Options struct {
-	JWTSecret  string
-	KeyFuncs   []KeyFunc
-	UserStore  UserStore
+	// JWT secret used to verify the JWT token.
+	JWTSecret string
+
+	// AccessKeyFuncs is a list of functions that are used to extract the access key
+	// from the request.
+	AccessKeyFuncs []AccessKeyFunc
+
+	// UserStore is a function that is used to get the user from the request
+	// with pluggable backends.
+	UserStore UserStore
+
+	// ErrHandler is a function that is used to handle and respond to errors.
 	ErrHandler ErrHandler
 }
 
-func Session(cfg *Options) func(next http.Handler) http.Handler {
-	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
-
-	eh := errHandler
-	if cfg != nil && cfg.ErrHandler != nil {
-		eh = cfg.ErrHandler
+func (o *Options) ApplyDefaults() {
+	if o.ErrHandler == nil {
+		o.ErrHandler = errHandler
 	}
+}
+
+func Session(cfg *Options) func(next http.Handler) http.Handler {
+	cfg.ApplyDefaults()
+	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +54,7 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 			)
 
 			if cfg != nil {
-				for _, f := range cfg.KeyFuncs {
+				for _, f := range cfg.AccessKeyFuncs {
 					if accessKey = f(r); accessKey != "" {
 						break
 					}
@@ -52,12 +64,12 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 			token, err := jwtauth.VerifyRequest(auth, r, jwtauth.TokenFromHeader)
 			if err != nil {
 				if errors.Is(err, jwtauth.ErrExpired) {
-					eh(r, w, proto.ErrSessionExpired)
+					cfg.ErrHandler(r, w, proto.ErrSessionExpired)
 					return
 				}
 
 				if !errors.Is(err, jwtauth.ErrNoTokenFound) {
-					eh(r, w, proto.ErrUnauthorized)
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized)
 					return
 				}
 			}
@@ -65,7 +77,7 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 			if token != nil {
 				claims, err := token.AsMap(ctx)
 				if err != nil {
-					eh(r, w, err)
+					cfg.ErrHandler(r, w, err)
 					return
 				}
 
@@ -85,7 +97,7 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 					if cfg != nil && cfg.UserStore != nil {
 						user, isAdmin, err := cfg.UserStore.GetUser(ctx, accountClaim)
 						if err != nil {
-							eh(r, w, err)
+							cfg.ErrHandler(r, w, err)
 							return
 						}
 
@@ -125,16 +137,13 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
 func AccessControl(acl Config[ACL], cfg *Options) func(next http.Handler) http.Handler {
-	eh := errHandler
-	if cfg != nil && cfg.ErrHandler != nil {
-		eh = cfg.ErrHandler
-	}
+	cfg.ApplyDefaults()
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			acl, err := acl.Get(r.URL.Path)
 			if err != nil {
-				eh(r, w, proto.ErrUnauthorized.WithCausef("get acl: %w", err))
+				cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get acl: %w", err))
 				return
 			}
 
@@ -144,7 +153,7 @@ func AccessControl(acl Config[ACL], cfg *Options) func(next http.Handler) http.H
 					err = proto.ErrUnauthorized
 				}
 
-				eh(r, w, err)
+				cfg.ErrHandler(r, w, err)
 				return
 			}
 
