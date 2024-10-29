@@ -27,11 +27,10 @@ type Options struct {
 	ErrHandler ErrHandler
 }
 
-func (o *Options) ApplyDefaults() error {
+func (o *Options) ApplyDefaults() {
 	if o.ErrHandler == nil {
 		o.ErrHandler = errHandler
 	}
-	return nil
 }
 
 func Session(cfg *Options) func(next http.Handler) http.Handler {
