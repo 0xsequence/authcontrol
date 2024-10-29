@@ -15,7 +15,7 @@ type Options struct {
 	// JWT secret used to verify the JWT token.
 	JWTSecret string
 
-	// KeyFuncs is a list of functions that are used to extract the access key
+	// AccessKeyFuncs is a list of functions that are used to extract the access key
 	// from the request.
 	AccessKeyFuncs []AccessKeyFunc
 
