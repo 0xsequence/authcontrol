@@ -11,6 +11,16 @@ import (
 	"github.com/0xsequence/authcontrol/proto"
 )
 
+const (
+	HeaderAccessKey = "X-Access-Key"
+)
+
+type AccessKeyFunc func(*http.Request) string
+
+func AccessKeyFromHeader(r *http.Request) string {
+	return r.Header.Get(HeaderAccessKey)
+}
+
 type ErrHandler func(r *http.Request, w http.ResponseWriter, err error)
 
 func errHandler(r *http.Request, w http.ResponseWriter, err error) {
@@ -25,8 +35,6 @@ func errHandler(r *http.Request, w http.ResponseWriter, err error) {
 	respBody, _ := json.Marshal(rpcErr)
 	w.Write(respBody)
 }
-
-type AccessKeyFunc func(*http.Request) string
 
 type UserStore interface {
 	GetUser(ctx context.Context, address string) (any, bool, error)
