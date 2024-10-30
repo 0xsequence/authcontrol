@@ -67,7 +67,7 @@ func TestSession(t *testing.T) {
 		MethodProject:   authcontrol.NewACL(proto.SessionType_Project.OrHigher()...),
 		MethodUser:      authcontrol.NewACL(proto.SessionType_User.OrHigher()...),
 		MethodAdmin:     authcontrol.NewACL(proto.SessionType_Admin.OrHigher()...),
-		MethodService:   authcontrol.NewACL(proto.SessionType_Service.OrHigher()...),
+		MethodService:   authcontrol.NewACL(proto.SessionType_InternalService.OrHigher()...),
 	}}
 
 	const (
@@ -105,8 +105,8 @@ func TestSession(t *testing.T) {
 		{Session: proto.SessionType_User, Admin: true},
 		{Session: proto.SessionType_Admin},
 		{Session: proto.SessionType_Admin, AccessKey: AccessKey},
-		{Session: proto.SessionType_Service},
-		{Session: proto.SessionType_Service, AccessKey: AccessKey},
+		{Session: proto.SessionType_InternalService},
+		{Session: proto.SessionType_InternalService, AccessKey: AccessKey},
 	}
 
 	for service := range ACLConfig {
@@ -128,7 +128,7 @@ func TestSession(t *testing.T) {
 						claims = map[string]any{"account": address}
 					case proto.SessionType_Admin:
 						claims = map[string]any{"account": WalletAddress, "admin": true}
-					case proto.SessionType_Service:
+					case proto.SessionType_InternalService:
 						claims = map[string]any{"service": ServiceName}
 					}
 

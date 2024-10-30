@@ -4,13 +4,13 @@ name = access-control
 version = v0.1.0
 
 enum SessionType: uint16
-  - Public
-  - Wallet
-  - AccessKey
-  - Project
-  - User
-  - Admin
-  - Service
+  - Public            # Public access (anonymous)
+  - Wallet            # Wallet access (wallet signed proof to jwt)
+  - AccessKey         # API access via a project *public* X-Access-Key (no jwt)
+  - Project           # Project access via *private* jwt scoped for the project (jwt)
+  - User              # User-level access (jwt)
+  - Admin             # Admin-level access (jwt)
+  - InternalService   # Internal service-to-service access (jwt)
 
 
 error 0001 Unauthorized      "Unauthorized access"                                       HTTP 401

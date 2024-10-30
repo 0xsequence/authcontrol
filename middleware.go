@@ -97,7 +97,7 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 				switch {
 				case serviceClaim != "":
 					ctx = WithService(ctx, serviceClaim)
-					sessionType = proto.SessionType_Service
+					sessionType = proto.SessionType_InternalService
 				case accountClaim != "":
 					ctx = WithAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
