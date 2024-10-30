@@ -11,7 +11,7 @@ import (
 )
 
 // Options for the authcontrol middleware handlers Session and AccessControl.
-type Options struct {
+type Options[T any] struct {
 	// JWT secret used to verify the JWT token.
 	JWTSecret string
 
@@ -21,13 +21,13 @@ type Options struct {
 
 	// UserStore is a function that is used to get the user from the request
 	// with pluggable backends.
-	UserStore UserStore
+	UserStore UserStore[T]
 
 	// ErrHandler is a function that is used to handle and respond to errors.
 	ErrHandler ErrHandler
 }
 
-func (o *Options) ApplyDefaults() {
+func (o *Options[T]) ApplyDefaults() {
 	// Set default access key functions if not provided.
 	// We intentionally check for nil instead of len == 0 because
 	// if you can pass an empty slice to have no access key defaults.
@@ -41,7 +41,7 @@ func (o *Options) ApplyDefaults() {
 	}
 }
 
-func Session(cfg *Options) func(next http.Handler) http.Handler {
+func Session[T any](cfg *Options[T]) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
 
@@ -144,7 +144,7 @@ func Session(cfg *Options) func(next http.Handler) http.Handler {
 
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
-func AccessControl(acl Config[ACL], cfg *Options) func(next http.Handler) http.Handler {
+func AccessControl[T any](acl Config[ACL], cfg *Options[T]) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 
 	return func(next http.Handler) http.Handler {
