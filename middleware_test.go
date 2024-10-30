@@ -64,7 +64,7 @@ func TestSession(t *testing.T) {
 		ServiceName   = "serviceName"
 	)
 
-	options := &authcontrol.Options[User]{
+	options := authcontrol.Options[User]{
 		JWTSecret: JWTSecret,
 		UserStore: MockStore{
 			UserAddress:  false,
@@ -176,7 +176,7 @@ func TestInvalid(t *testing.T) {
 		AdminAddress  = "adminAddress"
 	)
 
-	options := &authcontrol.Options[User]{
+	options := authcontrol.Options[User]{
 		JWTSecret: JWTSecret,
 		UserStore: MockStore{
 			UserAddress:  false,
@@ -286,7 +286,7 @@ func TestCustomErrHandler(t *testing.T) {
 		HTTPStatus: 400,
 	}
 
-	opts := &authcontrol.Options[User]{
+	opts := authcontrol.Options[User]{
 		JWTSecret: JWTSecret,
 		UserStore: MockStore{
 			UserAddress:  false,
