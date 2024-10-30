@@ -36,8 +36,8 @@ func errHandler(r *http.Request, w http.ResponseWriter, err error) {
 	w.Write(respBody)
 }
 
-type UserStore interface {
-	GetUser(ctx context.Context, address string) (any, bool, error)
+type UserStore[T any] interface {
+	GetUser(ctx context.Context, address string) (user *T, isAdmin bool, err error)
 }
 
 // Config is a generic map of services/methods to a config value.
