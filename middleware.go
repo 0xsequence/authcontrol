@@ -41,7 +41,7 @@ func (o *Options[T]) ApplyDefaults() {
 	}
 }
 
-func Session[T any](cfg *Options[T]) func(next http.Handler) http.Handler {
+func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
 
@@ -61,11 +61,9 @@ func Session[T any](cfg *Options[T]) func(next http.Handler) http.Handler {
 				token       jwt.Token
 			)
 
-			if cfg != nil {
-				for _, f := range cfg.AccessKeyFuncs {
-					if accessKey = f(r); accessKey != "" {
-						break
-					}
+			for _, f := range cfg.AccessKeyFuncs {
+				if accessKey = f(r); accessKey != "" {
+					break
 				}
 			}
 
@@ -102,7 +100,7 @@ func Session[T any](cfg *Options[T]) func(next http.Handler) http.Handler {
 					ctx = WithAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
 
-					if cfg != nil && cfg.UserStore != nil {
+					if cfg.UserStore != nil {
 						user, isAdmin, err := cfg.UserStore.GetUser(ctx, accountClaim)
 						if err != nil {
 							cfg.ErrHandler(r, w, err)
@@ -144,7 +142,7 @@ func Session[T any](cfg *Options[T]) func(next http.Handler) http.Handler {
 
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
-func AccessControl[T any](acl Config[ACL], cfg *Options[T]) func(next http.Handler) http.Handler {
+func AccessControl[T any](acl Config[ACL], cfg Options[T]) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 
 	return func(next http.Handler) http.Handler {
