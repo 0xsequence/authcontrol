@@ -92,10 +92,9 @@ func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
 				accountClaim, _ := claims["account"].(string)
 				adminClaim, _ := claims["admin"].(bool)
 				projectClaim, _ := claims["project"].(float64)
-				originClaim, _ := claims["ogn"].(string)
 
 				// Origin check
-				if originClaim != "" {
+				if originClaim, _ := claims["ogn"].(string); originClaim != "" {
 					originClaim = strings.TrimSuffix(originClaim, "/")
 					originHeader := strings.TrimSuffix(r.Header.Get("Origin"), "/")
 					if originHeader != "" && originHeader != originClaim {
