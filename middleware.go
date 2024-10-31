@@ -88,12 +88,6 @@ func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
 					return
 				}
 
-				serviceClaim, _ := claims["service"].(string)
-				accountClaim, _ := claims["account"].(string)
-				adminClaim, _ := claims["admin"].(bool)
-				projectClaim, _ := claims["project"].(float64)
-
-				// Origin check
 				if originClaim, _ := claims["ogn"].(string); originClaim != "" {
 					originClaim = strings.TrimSuffix(originClaim, "/")
 					originHeader := strings.TrimSuffix(r.Header.Get("Origin"), "/")
@@ -102,6 +96,11 @@ func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
 						return
 					}
 				}
+
+				serviceClaim, _ := claims["service"].(string)
+				accountClaim, _ := claims["account"].(string)
+				adminClaim, _ := claims["admin"].(bool)
+				projectClaim, _ := claims["project"].(float64)
 
 				switch {
 				case serviceClaim != "":
