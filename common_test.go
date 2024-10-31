@@ -21,17 +21,33 @@ func keyFunc(r *http.Request) string {
 	return r.Header.Get(HeaderKey)
 }
 
-func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, path, accessKey string, jwt string) (bool, error) {
+type requestOption func(r *http.Request)
+
+func accessKey(v string) requestOption {
+	return func(r *http.Request) {
+		r.Header.Set(HeaderKey, v)
+	}
+}
+
+func jwt(v string) requestOption {
+	return func(r *http.Request) {
+		r.Header.Set("Authorization", "Bearer "+v)
+	}
+}
+
+func origin(v string) requestOption {
+	return func(r *http.Request) {
+		r.Header.Set("Origin", v)
+	}
+}
+
+func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, path string, options ...requestOption) (bool, error) {
 	req, err := http.NewRequest("POST", path, nil)
 	require.NoError(t, err)
 
 	req.Header.Set("X-Real-IP", "127.0.0.1")
-	if accessKey != "" {
-		req.Header.Set(HeaderKey, accessKey)
-	}
-
-	if jwt != "" {
-		req.Header.Set("Authorization", "Bearer "+jwt)
+	for _, opt := range options {
+		opt(req)
 	}
 
 	rr := httptest.NewRecorder()
