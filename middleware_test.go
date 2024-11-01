@@ -344,21 +344,23 @@ func TestOrigin(t *testing.T) {
 	r.Use(authcontrol.Session(opts))
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	var claims map[string]any
-	claims = map[string]any{"user": "123", "ogn": "http://localhost"}
+	token := authcontrol.S2SToken(JWTSecret, map[string]any{
+		"user": "123",
+		"ogn":  "http://localhost",
+	})
 
 	// No Origin header
-	ok, err := executeRequest(t, ctx, r, "", jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err := executeRequest(t, ctx, r, "", jwt(token))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Valid Origin header
-	ok, err = executeRequest(t, ctx, r, "", jwt(authcontrol.S2SToken(JWTSecret, claims)), origin("http://localhost"))
+	ok, err = executeRequest(t, ctx, r, "", jwt(token), origin("http://localhost"))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid Origin header
-	ok, err = executeRequest(t, ctx, r, "", jwt(authcontrol.S2SToken(JWTSecret, claims)), origin("http://evil.com"))
+	ok, err = executeRequest(t, ctx, r, "", jwt(token), origin("http://evil.com"))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 }
