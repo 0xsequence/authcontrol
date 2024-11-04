@@ -3,6 +3,7 @@ package authcontrol
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -85,6 +86,15 @@ func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
 				if err != nil {
 					cfg.ErrHandler(r, w, err)
 					return
+				}
+
+				if originClaim, _ := claims["ogn"].(string); originClaim != "" {
+					originClaim = strings.TrimSuffix(originClaim, "/")
+					originHeader := strings.TrimSuffix(r.Header.Get("Origin"), "/")
+					if originHeader != "" && originHeader != originClaim {
+						cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("invalid origin claim"))
+						return
+					}
 				}
 
 				serviceClaim, _ := claims["service"].(string)
