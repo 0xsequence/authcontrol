@@ -20,3 +20,4 @@ error 1004 RequestConflict  "Conflict with target resource"       HTTP 409
 error 1005 Aborted          "Request aborted"                     HTTP 400
 error 1006 Geoblocked       "Geoblocked region"                   HTTP 451
 error 1007 RateLimited      "Rate-limited. Please slow down."     HTTP 429
+error 1008 ProjectNotFound  "Project not found"                   HTTP 401

@@ -40,6 +40,10 @@ type UserStore[T any] interface {
 	GetUser(ctx context.Context, address string) (user *T, isAdmin bool, err error)
 }
 
+type ProjectStore[T any] interface {
+	GetProject(ctx context.Context, id uint64) (project *T, err error)
+}
+
 // Config is a generic map of services/methods to a config value.
 // map[service]map[method]T
 type Config[T any] map[string]map[string]T

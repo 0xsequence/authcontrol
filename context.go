@@ -20,6 +20,7 @@ var (
 	ctxKeyUser        = &contextKey{"User"}
 	ctxKeyService     = &contextKey{"Service"}
 	ctxKeyAccessKey   = &contextKey{"AccessKey"}
+	ctxKeyProject     = &contextKey{"Project"}
 	ctxKeyProjectID   = &contextKey{"ProjectID"}
 )
 
@@ -70,8 +71,8 @@ func WithUser(ctx context.Context, user any) context.Context {
 }
 
 // GetUser returns the user from the context.
-func GetUser[T any](ctx context.Context) (T, bool) {
-	v, ok := ctx.Value(ctxKeyUser).(T)
+func GetUser[T any](ctx context.Context) (*T, bool) {
+	v, ok := ctx.Value(ctxKeyUser).(*T)
 	return v, ok
 }
 
@@ -80,6 +81,8 @@ func GetUser[T any](ctx context.Context) (T, bool) {
 //
 
 // WithService adds the service to the context.
+//
+// Deprecated: this will be removed in the future, use Session middleware with a JWT token.
 func WithService(ctx context.Context, service string) context.Context {
 	return context.WithValue(ctx, ctxKeyService, service)
 }
@@ -122,5 +125,22 @@ func WithProjectID(ctx context.Context, project uint64) context.Context {
 // In case its not set, it will return 0.
 func GetProjectID(ctx context.Context) (uint64, bool) {
 	v, ok := ctx.Value(ctxKeyProjectID).(uint64)
+	return v, ok
+}
+
+//
+// Project
+//
+
+// WithProject adds the project to the context.
+//
+// Deprecated: this will be removed in the future, use Session middleware with a JWT token.
+func WithProject(ctx context.Context, project any) context.Context {
+	return context.WithValue(ctx, ctxKeyProject, project)
+}
+
+// GetProject returns the project from the context.
+func GetProject[T any](ctx context.Context) (*T, bool) {
+	v, ok := ctx.Value(ctxKeyProject).(*T)
 	return v, ok
 }

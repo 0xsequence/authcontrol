@@ -21,16 +21,26 @@ const JWTSecret = "secret"
 
 type User struct{}
 
-// MockStore is a simple in-memory User store for testing, it stores the address and admin status.
-type MockStore map[string]bool
+// MockUserStore is a simple in-memory User store for testing, it stores the address and admin status.
+type MockUserStore map[string]bool
 
 // GetUser returns the user and the admin status from the store.
-func (m MockStore) GetUser(ctx context.Context, address string) (user *User, isAdmin bool, err error) {
+func (m MockUserStore) GetUser(ctx context.Context, address string) (user *User, isAdmin bool, err error) {
 	v, ok := m[address]
 	if !ok {
 		return nil, false, nil
 	}
 	return &User{}, v, nil
+}
+
+type Project struct{}
+
+// MockProjectStore is a simple in-memory Project store for testing, it stores the project.
+type MockProjectStore map[uint64]*Project
+
+// GetProject returns the project from the store.
+func (m MockProjectStore) GetProject(ctx context.Context, id uint64) (project *Project, err error) {
+	return m[id], nil
 }
 
 func TestSession(t *testing.T) {
@@ -62,13 +72,17 @@ func TestSession(t *testing.T) {
 		UserAddress   = "userAddress"
 		AdminAddress  = "adminAddress"
 		ServiceName   = "serviceName"
+		ProjectID     = 7
 	)
 
-	options := authcontrol.Options[User]{
+	options := authcontrol.Options[User, Project]{
 		JWTSecret: JWTSecret,
-		UserStore: MockStore{
+		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
+		},
+		ProjectStore: MockProjectStore{
+			ProjectID: &Project{},
 		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
@@ -117,7 +131,7 @@ func TestSession(t *testing.T) {
 					case proto.SessionType_Wallet:
 						claims = map[string]any{"account": WalletAddress}
 					case proto.SessionType_Project:
-						claims = map[string]any{"account": WalletAddress, "project": 7}
+						claims = map[string]any{"account": WalletAddress, "project": ProjectID}
 					case proto.SessionType_User:
 						address := UserAddress
 						if tc.Admin {
@@ -182,11 +196,12 @@ func TestInvalid(t *testing.T) {
 		WalletAddress = "walletAddress"
 		UserAddress   = "userAddress"
 		AdminAddress  = "adminAddress"
+		ProjectID     = 7
 	)
 
-	options := authcontrol.Options[User]{
+	options := authcontrol.Options[User, Project]{
 		JWTSecret: JWTSecret,
-		UserStore: MockStore{
+		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
 		},
@@ -264,6 +279,13 @@ func TestInvalid(t *testing.T) {
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), accessKey(AccessKey), jwt(expiredJWT))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
+
+	// Invalid Project
+	wrongProject := authcontrol.S2SToken(JWTSecret, claims)
+	claims = map[string]any{"account": WalletAddress, "project": ProjectID + 1}
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), jwt(wrongProject))
+	assert.Error(t, err)
+	assert.False(t, ok)
 }
 
 func TestCustomErrHandler(t *testing.T) {
@@ -294,9 +316,9 @@ func TestCustomErrHandler(t *testing.T) {
 		HTTPStatus: 400,
 	}
 
-	opts := authcontrol.Options[User]{
+	opts := authcontrol.Options[User, Project]{
 		JWTSecret: JWTSecret,
-		UserStore: MockStore{
+		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
 		},
@@ -336,7 +358,7 @@ func TestCustomErrHandler(t *testing.T) {
 func TestOrigin(t *testing.T) {
 	ctx := context.Background()
 
-	opts := authcontrol.Options[any]{
+	opts := authcontrol.Options[any, any]{
 		JWTSecret: JWTSecret,
 	}
 
