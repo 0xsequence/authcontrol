@@ -36,10 +36,14 @@ func errHandler(r *http.Request, w http.ResponseWriter, err error) {
 	w.Write(respBody)
 }
 
+// UserStore is a pluggable backend that verifies if a user exists.
+// If the account doesn't exist, it should return nil, nil.
 type UserStore[T any] interface {
 	GetUser(ctx context.Context, address string) (user *T, isAdmin bool, err error)
 }
 
+// ProjectStore is a pluggable backend that verifies if the project exists.
+// If the project doesn't exist, it should return nil, nil.
 type ProjectStore[T any] interface {
 	GetProject(ctx context.Context, id uint64) (project *T, err error)
 }
