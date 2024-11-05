@@ -205,6 +205,9 @@ func TestInvalid(t *testing.T) {
 			UserAddress:  false,
 			AdminAddress: true,
 		},
+		ProjectStore: MockProjectStore{
+			ProjectID: &Project{},
+		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
 
@@ -281,8 +284,7 @@ func TestInvalid(t *testing.T) {
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
 
 	// Invalid Project
-	wrongProject := authcontrol.S2SToken(JWTSecret, claims)
-	claims = map[string]any{"account": WalletAddress, "project": ProjectID + 1}
+	wrongProject := authcontrol.S2SToken(JWTSecret, map[string]any{"account": WalletAddress, "project": ProjectID + 1})
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), jwt(wrongProject))
 	assert.Error(t, err)
 	assert.False(t, ok)
