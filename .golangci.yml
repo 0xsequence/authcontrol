@@ -4,7 +4,6 @@ linters:
   # Enable specific linter
   enable:
     - errcheck
-    - gci
     - wrapcheck
     - ineffassign
     - unused
