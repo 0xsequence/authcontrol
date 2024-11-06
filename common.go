@@ -37,7 +37,7 @@ func errHandler(r *http.Request, w http.ResponseWriter, err error) {
 }
 
 // UserStore is a pluggable backend that verifies if a user exists.
-// If the account doesn't exist, it should return nil, nil.
+// If the account doesn't exist, it should return nil, false, nil.
 type UserStore interface {
 	GetUser(ctx context.Context, address string) (user any, isAdmin bool, err error)
 }
