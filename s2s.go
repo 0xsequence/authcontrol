@@ -22,7 +22,9 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 	httpClient := &http.Client{
 		Transport: transport.Chain(http.DefaultTransport,
 			traceid.Transport,
-			transport.SetHeaderFunc("Authorization", s2sAuthHeader(cfg.JWTSecret, map[string]any{"service": cfg.Service})),
+			transport.SetHeaderFunc("Authorization", func(req *http.Request) string {
+				return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": cfg.Service})
+			}),
 			transport.If(cfg.DebugRequests, transport.LogRequests(transport.LogOptions{Concise: true, CURL: true})),
 		),
 	}
@@ -49,10 +51,4 @@ func S2SToken(jwtSecret string, claims map[string]any) string {
 
 	_, t, _ := jwtAuth.Encode(c)
 	return t
-}
-
-func s2sAuthHeader(jwtSecret string, claims map[string]any) func(req *http.Request) string {
-	return func(req *http.Request) string {
-		return "BEARER " + S2SToken(jwtSecret, claims)
-	}
 }
