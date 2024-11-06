@@ -12,23 +12,24 @@ import (
 )
 
 // Options for the authcontrol middleware handlers Session and AccessControl.
-type Options[T any] struct {
+type Options struct {
 	// JWT secret used to verify the JWT token.
 	JWTSecret string
 
-	// AccessKeyFuncs is a list of functions that are used to extract the access key
-	// from the request.
+	// AccessKeyFuncs are used to extract the access key from the request.
 	AccessKeyFuncs []AccessKeyFunc
 
-	// UserStore is a function that is used to get the user from the request
-	// with pluggable backends.
-	UserStore UserStore[T]
+	// UserStore is a pluggable backends that verifies if the account exists.
+	UserStore UserStore
+
+	// ProjectStore is a pluggable backends that verifies if the project exists.
+	ProjectStore ProjectStore
 
 	// ErrHandler is a function that is used to handle and respond to errors.
 	ErrHandler ErrHandler
 }
 
-func (o *Options[T]) ApplyDefaults() {
+func (o *Options) ApplyDefaults() {
 	// Set default access key functions if not provided.
 	// We intentionally check for nil instead of len == 0 because
 	// if you can pass an empty slice to have no access key defaults.
@@ -42,7 +43,7 @@ func (o *Options[T]) ApplyDefaults() {
 	}
 }
 
-func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
+func Session(cfg Options) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
 
@@ -133,6 +134,18 @@ func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
 
 					if projectClaim > 0 {
 						projectID := uint64(projectClaim)
+						if cfg.ProjectStore != nil {
+							project, err := cfg.ProjectStore.GetProject(ctx, projectID)
+							if err != nil {
+								cfg.ErrHandler(r, w, err)
+								return
+							}
+							if project == nil {
+								cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
+								return
+							}
+							ctx = WithProject(ctx, project)
+						}
 						ctx = WithProjectID(ctx, projectID)
 						sessionType = proto.SessionType_Project
 					}
@@ -152,7 +165,7 @@ func Session[T any](cfg Options[T]) func(next http.Handler) http.Handler {
 
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
-func AccessControl[T any](acl Config[ACL], cfg Options[T]) func(next http.Handler) http.Handler {
+func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 
 	return func(next http.Handler) http.Handler {
