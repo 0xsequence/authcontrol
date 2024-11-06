@@ -102,7 +102,9 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				serviceClaim, _ := claims["service"].(string)
 				accountClaim, _ := claims["account"].(string)
 				adminClaim, _ := claims["admin"].(bool)
-				// TODO: we support both claims for now, we'll eventually deprecate one.
+				// We support both claims for now, we'll deprecate one if we can.
+				// - `project` is used by the builder to generate Project JWT tokens.
+				// - `project_id` is used by API for WaaS related authentication.
 				projectClaim, _ := cmp.Or(claims["project"], claims["project_id"]).(float64)
 
 				switch {
