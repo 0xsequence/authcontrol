@@ -1,6 +1,7 @@
 package authcontrol
 
 import (
+	"cmp"
 	"errors"
 	"net/http"
 	"strings"
@@ -101,7 +102,8 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				serviceClaim, _ := claims["service"].(string)
 				accountClaim, _ := claims["account"].(string)
 				adminClaim, _ := claims["admin"].(bool)
-				projectClaim, _ := claims["project"].(float64)
+				// TODO: we support both claims for now, we'll eventually deprecate one.
+				projectClaim, _ := cmp.Or(claims["project"], claims["project_id"]).(float64)
 
 				switch {
 				case serviceClaim != "":

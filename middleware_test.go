@@ -66,7 +66,7 @@ func TestSession(t *testing.T) {
 	}}
 
 	const (
-		AccessKey     = "AQAAAAAAAAAHkL0mNSrn6Sm3oHs0xfa_DnY"
+		AccessKey     = "abcde12345"
 		WalletAddress = "walletAddress"
 		UserAddress   = "userAddress"
 		AdminAddress  = "adminAddress"
@@ -191,7 +191,7 @@ func TestInvalid(t *testing.T) {
 	}
 
 	const (
-		AccessKey     = "AQAAAAAAAAAHkL0mNSrn6Sm3oHs0xfa_DnY"
+		AccessKey     = "abcde12345"
 		WalletAddress = "walletAddress"
 		UserAddress   = "userAddress"
 		AdminAddress  = "adminAddress"
@@ -283,10 +283,10 @@ func TestInvalid(t *testing.T) {
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
 
 	// Invalid Project
-	wrongProject := authcontrol.S2SToken(JWTSecret, map[string]any{"account": WalletAddress, "project": ProjectID + 1})
+	wrongProject := authcontrol.S2SToken(JWTSecret, map[string]any{"account": WalletAddress, "project_id": ProjectID + 1})
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), jwt(wrongProject))
-	assert.Error(t, err)
 	assert.False(t, ok)
+	assert.ErrorIs(t, err, proto.ErrProjectNotFound)
 }
 
 func TestCustomErrHandler(t *testing.T) {
@@ -305,7 +305,7 @@ func TestCustomErrHandler(t *testing.T) {
 	}
 
 	const (
-		AccessKey    = "AQAAAAAAAAAHkL0mNSrn6Sm3oHs0xfa_DnY"
+		AccessKey    = "abcde12345"
 		UserAddress  = "userAddress"
 		AdminAddress = "adminAddress"
 	)
