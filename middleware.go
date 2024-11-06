@@ -134,9 +134,9 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 
 					if projectClaim > 0 {
 						projectID := uint64(projectClaim)
-						var project any
 						if cfg.ProjectStore != nil {
-							if project, err = cfg.ProjectStore.GetProject(ctx, projectID); err != nil {
+							project, err := cfg.ProjectStore.GetProject(ctx, projectID)
+							if err != nil {
 								cfg.ErrHandler(r, w, err)
 								return
 							}
@@ -144,11 +144,9 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 								cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
 								return
 							}
-						}
-						ctx = WithProjectID(ctx, projectID)
-						if project != nil {
 							ctx = WithProject(ctx, project)
 						}
+						ctx = WithProjectID(ctx, projectID)
 						sessionType = proto.SessionType_Project
 					}
 				}
