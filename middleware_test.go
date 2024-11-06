@@ -19,28 +19,27 @@ import (
 // JWTSecret is the secret used to sign the JWT token in the tests.
 const JWTSecret = "secret"
 
-type User struct{}
-
 // MockUserStore is a simple in-memory User store for testing, it stores the address and admin status.
 type MockUserStore map[string]bool
 
 // GetUser returns the user and the admin status from the store.
-func (m MockUserStore) GetUser(ctx context.Context, address string) (user *User, isAdmin bool, err error) {
+func (m MockUserStore) GetUser(ctx context.Context, address string) (user any, isAdmin bool, err error) {
 	v, ok := m[address]
 	if !ok {
 		return nil, false, nil
 	}
-	return &User{}, v, nil
+	return struct{}{}, v, nil
 }
 
-type Project struct{}
-
 // MockProjectStore is a simple in-memory Project store for testing, it stores the project.
-type MockProjectStore map[uint64]*Project
+type MockProjectStore map[uint64]struct{}
 
 // GetProject returns the project from the store.
-func (m MockProjectStore) GetProject(ctx context.Context, id uint64) (project *Project, err error) {
-	return m[id], nil
+func (m MockProjectStore) GetProject(ctx context.Context, id uint64) (project any, err error) {
+	if _, ok := m[id]; !ok {
+		return nil, nil
+	}
+	return struct{}{}, nil
 }
 
 func TestSession(t *testing.T) {
@@ -75,14 +74,14 @@ func TestSession(t *testing.T) {
 		ProjectID     = 7
 	)
 
-	options := authcontrol.Options[User, Project]{
+	options := authcontrol.Options{
 		JWTSecret: JWTSecret,
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
 		},
 		ProjectStore: MockProjectStore{
-			ProjectID: &Project{},
+			ProjectID: struct{}{},
 		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
@@ -199,14 +198,14 @@ func TestInvalid(t *testing.T) {
 		ProjectID     = 7
 	)
 
-	options := authcontrol.Options[User, Project]{
+	options := authcontrol.Options{
 		JWTSecret: JWTSecret,
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
 		},
 		ProjectStore: MockProjectStore{
-			ProjectID: &Project{},
+			ProjectID: struct{}{},
 		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
@@ -318,7 +317,7 @@ func TestCustomErrHandler(t *testing.T) {
 		HTTPStatus: 400,
 	}
 
-	opts := authcontrol.Options[User, Project]{
+	opts := authcontrol.Options{
 		JWTSecret: JWTSecret,
 		UserStore: MockUserStore{
 			UserAddress:  false,
@@ -360,7 +359,7 @@ func TestCustomErrHandler(t *testing.T) {
 func TestOrigin(t *testing.T) {
 	ctx := context.Background()
 
-	opts := authcontrol.Options[any, any]{
+	opts := authcontrol.Options{
 		JWTSecret: JWTSecret,
 	}
 

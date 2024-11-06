@@ -38,14 +38,14 @@ func errHandler(r *http.Request, w http.ResponseWriter, err error) {
 
 // UserStore is a pluggable backend that verifies if a user exists.
 // If the account doesn't exist, it should return nil, nil.
-type UserStore[T any] interface {
-	GetUser(ctx context.Context, address string) (user *T, isAdmin bool, err error)
+type UserStore interface {
+	GetUser(ctx context.Context, address string) (user any, isAdmin bool, err error)
 }
 
 // ProjectStore is a pluggable backend that verifies if the project exists.
 // If the project doesn't exist, it should return nil, nil.
-type ProjectStore[T any] interface {
-	GetProject(ctx context.Context, id uint64) (project *T, err error)
+type ProjectStore interface {
+	GetProject(ctx context.Context, id uint64) (project any, err error)
 }
 
 // Config is a generic map of services/methods to a config value.
