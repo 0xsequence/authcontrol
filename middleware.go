@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -46,7 +47,7 @@ func (o *Options) ApplyDefaults() {
 
 func Session(cfg Options) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
-	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
+	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil, jwt.WithAcceptableSkew(2*time.Minute))
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +71,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				}
 			}
 
+			// Verify JWT token and validate its claims.
 			token, err := jwtauth.VerifyRequest(auth, r, jwtauth.TokenFromHeader)
 			if err != nil {
 				if errors.Is(err, jwtauth.ErrExpired) {
