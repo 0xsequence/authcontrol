@@ -264,7 +264,7 @@ func TestInvalid(t *testing.T) {
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 
 	// Expired JWT Token
-	claims["exp"] = time.Now().Add(-time.Second).Unix()
+	claims["exp"] = time.Now().Add(-5 * time.Minute).Unix() // Note: Session() middleware allows some skew.
 	expiredJWT := authcontrol.S2SToken(JWTSecret, claims)
 
 	// Expired JWT Token valid method
