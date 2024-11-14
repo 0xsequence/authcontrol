@@ -87,10 +87,11 @@ func TestSession(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(
-		authcontrol.Session(options),
-		authcontrol.AccessControl(ACLConfig, options),
-	)
+	r.Use(authcontrol.Verify(options))
+	r.Use(authcontrol.Session(options))
+	r.Use(authcontrol.Session(options))
+	r.Use(authcontrol.AccessControl(ACLConfig, options))
+
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	ctx := context.Background()
@@ -211,6 +212,7 @@ func TestInvalid(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
+	r.Use(authcontrol.Verify(options))
 	r.Use(authcontrol.Session(options))
 	r.Use(authcontrol.AccessControl(ACLConfig, options))
 
@@ -336,10 +338,10 @@ func TestCustomErrHandler(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(
-		authcontrol.Session(opts),
-		authcontrol.AccessControl(ACLConfig, opts),
-	)
+	r.Use(authcontrol.Verify(opts))
+	r.Use(authcontrol.Session(opts))
+	r.Use(authcontrol.AccessControl(ACLConfig, opts))
+
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	var claims map[string]any
@@ -364,6 +366,7 @@ func TestOrigin(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
+	r.Use(authcontrol.Verify(opts))
 	r.Use(authcontrol.Session(opts))
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 

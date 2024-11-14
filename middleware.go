@@ -46,7 +46,7 @@ func (o *Options) ApplyDefaults() {
 	}
 }
 
-func Session(cfg Options) func(next http.Handler) http.Handler {
+func Verify(cfg Options) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil, jwt.WithAcceptableSkew(2*time.Minute))
 
@@ -54,25 +54,6 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			// check if the request already contains session, if it does then continue
-			if _, ok := GetSessionType(ctx); ok {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			var (
-				sessionType proto.SessionType
-				accessKey   string
-				token       jwt.Token
-			)
-
-			for _, f := range cfg.AccessKeyFuncs {
-				if accessKey = f(r); accessKey != "" {
-					break
-				}
-			}
-
-			// Verify JWT token and validate its claims.
 			token, err := jwtauth.VerifyRequest(auth, r, jwtauth.TokenFromHeader)
 			if err != nil {
 				if errors.Is(err, jwtauth.ErrExpired) {
@@ -89,7 +70,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			if token != nil {
 				claims, err := token.AsMap(ctx)
 				if err != nil {
-					cfg.ErrHandler(r, w, err)
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("invalid token: %w", err))
 					return
 				}
 
@@ -102,6 +83,44 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 					}
 				}
 
+				ctx = jwtauth.NewContext(ctx, token, nil)
+			}
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func Session(cfg Options) func(next http.Handler) http.Handler {
+	cfg.ApplyDefaults()
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+
+			// check if the request already contains session, if it does then continue
+			if _, ok := GetSessionType(ctx); ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			var (
+				accessKey   string
+				sessionType proto.SessionType
+			)
+
+			for _, f := range cfg.AccessKeyFuncs {
+				if accessKey = f(r); accessKey != "" {
+					break
+				}
+			}
+
+			_, claims, err := jwtauth.FromContext(ctx)
+			if err != nil {
+				cfg.ErrHandler(r, w, err)
+				return
+			}
+			if claims != nil {
 				serviceClaim, _ := claims["service"].(string)
 				accountClaim, _ := claims["account"].(string)
 				adminClaim, _ := claims["admin"].(bool)
