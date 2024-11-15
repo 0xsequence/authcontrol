@@ -2,6 +2,7 @@ package authcontrol
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -193,6 +194,26 @@ func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Ha
 			}
 
 			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// PropagateAccessKey propagates the access key from the context to other webrpc packages.
+func PropagateAccessKey(headerContextFuncs ...func(context.Context, http.Header) (context.Context, error)) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+
+			if accessKey, ok := GetAccessKey(ctx); ok {
+				h := http.Header{
+					HeaderAccessKey: []string{accessKey},
+				}
+				for _, fn := range headerContextFuncs {
+					ctx, _ = fn(ctx, h)
+				}
+			}
+
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
