@@ -158,7 +158,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				}
 			}
 
-			if accessKey != "" && sessionType < proto.SessionType_Admin {
+			if accessKey != "" {
 				ctx = WithAccessKey(ctx, accessKey)
 				sessionType = max(sessionType, proto.SessionType_AccessKey)
 			}
