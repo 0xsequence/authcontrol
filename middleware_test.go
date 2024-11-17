@@ -31,17 +31,6 @@ func (m MockUserStore) GetUser(ctx context.Context, address string) (user any, i
 	return struct{}{}, v, nil
 }
 
-// MockProjectStore is a simple in-memory Project store for testing, it stores the project.
-type MockProjectStore map[uint64]struct{}
-
-// GetProject returns the project from the store.
-func (m MockProjectStore) GetProject(ctx context.Context, id uint64) (project any, err error) {
-	if _, ok := m[id]; !ok {
-		return nil, nil
-	}
-	return struct{}{}, nil
-}
-
 func TestSession(t *testing.T) {
 	const (
 		MethodPublic    = "MethodPublic"
@@ -75,20 +64,18 @@ func TestSession(t *testing.T) {
 	)
 
 	options := authcontrol.Options{
-		JWTSecret: JWTSecret,
+		Verifier: authcontrol.StaticAuth{
+			Secret: []byte(JWTSecret),
+		},
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
-		},
-		ProjectStore: MockProjectStore{
-			ProjectID: struct{}{},
 		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
 
 	r := chi.NewRouter()
-	r.Use(authcontrol.Verify(options))
-	r.Use(authcontrol.Session(options))
+	r.Use(authcontrol.VerifyToken(options))
 	r.Use(authcontrol.Session(options))
 	r.Use(authcontrol.AccessControl(ACLConfig, options))
 
@@ -200,19 +187,18 @@ func TestInvalid(t *testing.T) {
 	)
 
 	options := authcontrol.Options{
-		JWTSecret: JWTSecret,
+		Verifier: authcontrol.StaticAuth{
+			Secret: []byte(JWTSecret),
+		},
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
-		},
-		ProjectStore: MockProjectStore{
-			ProjectID: struct{}{},
 		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
 
 	r := chi.NewRouter()
-	r.Use(authcontrol.Verify(options))
+	r.Use(authcontrol.VerifyToken(options))
 	r.Use(authcontrol.Session(options))
 	r.Use(authcontrol.AccessControl(ACLConfig, options))
 
@@ -283,12 +269,6 @@ func TestInvalid(t *testing.T) {
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), accessKey(AccessKey), jwt(expiredJWT))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
-
-	// Invalid Project
-	wrongProject := authcontrol.S2SToken(JWTSecret, map[string]any{"account": WalletAddress, "project_id": ProjectID + 1})
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), jwt(wrongProject))
-	assert.False(t, ok)
-	assert.ErrorIs(t, err, proto.ErrProjectNotFound)
 }
 
 func TestCustomErrHandler(t *testing.T) {
@@ -320,7 +300,9 @@ func TestCustomErrHandler(t *testing.T) {
 	}
 
 	opts := authcontrol.Options{
-		JWTSecret: JWTSecret,
+		Verifier: authcontrol.StaticAuth{
+			Secret: []byte(JWTSecret),
+		},
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -338,7 +320,7 @@ func TestCustomErrHandler(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(authcontrol.Verify(opts))
+	r.Use(authcontrol.VerifyToken(opts))
 	r.Use(authcontrol.Session(opts))
 	r.Use(authcontrol.AccessControl(ACLConfig, opts))
 
@@ -362,11 +344,13 @@ func TestOrigin(t *testing.T) {
 	ctx := context.Background()
 
 	opts := authcontrol.Options{
-		JWTSecret: JWTSecret,
+		Verifier: authcontrol.StaticAuth{
+			Secret: []byte(JWTSecret),
+		},
 	}
 
 	r := chi.NewRouter()
-	r.Use(authcontrol.Verify(opts))
+	r.Use(authcontrol.VerifyToken(opts))
 	r.Use(authcontrol.Session(opts))
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 

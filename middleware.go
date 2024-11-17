@@ -17,16 +17,13 @@ import (
 // Options for the authcontrol middleware handlers Session and AccessControl.
 type Options struct {
 	// JWT secret used to verify the JWT token.
-	JWTSecret string
+	Verifier AuthProvider
 
 	// AccessKeyFuncs are used to extract the access key from the request.
 	AccessKeyFuncs []AccessKeyFunc
 
 	// UserStore is a pluggable backends that verifies if the account exists.
 	UserStore UserStore
-
-	// ProjectStore is a pluggable backends that verifies if the project exists.
-	ProjectStore ProjectStore
 
 	// ErrHandler is a function that is used to handle and respond to errors.
 	ErrHandler ErrHandler
@@ -46,13 +43,21 @@ func (o *Options) ApplyDefaults() {
 	}
 }
 
-func Verify(cfg Options) func(next http.Handler) http.Handler {
+func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
-	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil, jwt.WithAcceptableSkew(2*time.Minute))
+	jwtOptions := []jwt.ValidateOption{
+		jwt.WithAcceptableSkew(2 * time.Minute),
+	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
+
+			auth, err := cfg.Verifier.GetAuth(r, jwtOptions...)
+			if err != nil {
+				cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get verifier: %w", err))
+				return
+			}
 
 			token, err := jwtauth.VerifyRequest(auth, r, jwtauth.TokenFromHeader)
 			if err != nil {
@@ -159,20 +164,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 					}
 
 					if projectClaim > 0 {
-						projectID := uint64(projectClaim)
-						if cfg.ProjectStore != nil {
-							project, err := cfg.ProjectStore.GetProject(ctx, projectID)
-							if err != nil {
-								cfg.ErrHandler(r, w, err)
-								return
-							}
-							if project == nil {
-								cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
-								return
-							}
-							ctx = WithProject(ctx, project)
-						}
-						ctx = WithProjectID(ctx, projectID)
+						ctx = WithProjectID(ctx, uint64(projectClaim))
 						sessionType = proto.SessionType_Project
 					}
 				}

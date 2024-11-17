@@ -42,12 +42,6 @@ type UserStore interface {
 	GetUser(ctx context.Context, address string) (user any, isAdmin bool, err error)
 }
 
-// ProjectStore is a pluggable backend that verifies if the project exists.
-// If the project doesn't exist, it should return nil, nil.
-type ProjectStore interface {
-	GetProject(ctx context.Context, id uint64) (project any, err error)
-}
-
 // Config is a generic map of services/methods to a config value.
 // map[service]map[method]T
 type Config[T any] map[string]map[string]T
