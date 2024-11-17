@@ -32,7 +32,7 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 
 // Create short-lived service-to-service JWT token for internal communication between Sequence services.
 func S2SToken(secret string, claims map[string]any) string {
-	jwtAuth, _ := StaticAuth{Secret: []byte(secret)}.GetAuth(nil)
+	jwtAuth, _ := NewAuth(secret).GetAuth(nil)
 	now := time.Now().UTC()
 
 	c := maps.Clone(claims)

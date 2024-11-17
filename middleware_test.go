@@ -2,7 +2,11 @@ package authcontrol_test
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,7 +14,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/0xsequence/authcontrol"
 	"github.com/0xsequence/authcontrol/proto"
@@ -64,9 +70,7 @@ func TestSession(t *testing.T) {
 	)
 
 	options := authcontrol.Options{
-		Verifier: authcontrol.StaticAuth{
-			Secret: []byte(JWTSecret),
-		},
+		Verifier: authcontrol.NewAuth(JWTSecret),
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -187,9 +191,7 @@ func TestInvalid(t *testing.T) {
 	)
 
 	options := authcontrol.Options{
-		Verifier: authcontrol.StaticAuth{
-			Secret: []byte(JWTSecret),
-		},
+		Verifier: authcontrol.NewAuth(JWTSecret),
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -300,9 +302,7 @@ func TestCustomErrHandler(t *testing.T) {
 	}
 
 	opts := authcontrol.Options{
-		Verifier: authcontrol.StaticAuth{
-			Secret: []byte(JWTSecret),
-		},
+		Verifier: authcontrol.NewAuth(JWTSecret),
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -344,9 +344,7 @@ func TestOrigin(t *testing.T) {
 	ctx := context.Background()
 
 	opts := authcontrol.Options{
-		Verifier: authcontrol.StaticAuth{
-			Secret: []byte(JWTSecret),
-		},
+		Verifier: authcontrol.NewAuth(JWTSecret),
 	}
 
 	r := chi.NewRouter()
@@ -373,4 +371,72 @@ func TestOrigin(t *testing.T) {
 	ok, err = executeRequest(t, ctx, r, "", jwt(token), origin("http://evil.com"))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
+}
+
+type MockAuthStore map[uint64]authcontrol.StaticAuth
+
+func (m MockAuthStore) GetAuth(ctx context.Context, projectID uint64) (*authcontrol.StaticAuth, error) {
+	auth, ok := m[projectID]
+	if !ok {
+		return nil, nil
+	}
+	return &auth, nil
+}
+
+func TestProjectVerifier(t *testing.T) {
+	ctx := context.Background()
+
+	authStore := MockAuthStore{}
+
+	opts := authcontrol.Options{
+		Verifier: authcontrol.ProjectProvider{
+			Store: authStore,
+		},
+	}
+
+	r := chi.NewRouter()
+	r.Use(authcontrol.VerifyToken(opts))
+	r.Use(authcontrol.Session(opts))
+	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+	projectID := uint64(7)
+
+	authStore[projectID] = authcontrol.StaticAuth{
+		Algorythm: authcontrol.DefaultAlgorythm,
+		Private:   []byte(JWTSecret),
+	}
+
+	token := authcontrol.S2SToken(JWTSecret, map[string]any{
+		"project_id": projectID,
+	})
+
+	ok, err := executeRequest(t, ctx, r, "", jwt(token))
+	assert.True(t, ok)
+	assert.NoError(t, err)
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	require.NoError(t, err)
+	require.NoError(t, privateKey.Validate())
+
+	publicRaw, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err)
+
+	public := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PUBLIC KEY",
+		Bytes: publicRaw,
+	})
+
+	authStore[projectID] = authcontrol.StaticAuth{
+		Algorythm: "RS256",
+		Public:    public,
+	}
+
+	_, token, err = jwtauth.New("RS256", privateKey, nil).Encode(map[string]any{
+		"project_id": projectID,
+	})
+	require.NoError(t, err)
+
+	ok, err = executeRequest(t, ctx, r, "", jwt(token))
+	assert.True(t, ok)
+	assert.NoError(t, err)
 }
