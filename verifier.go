@@ -49,7 +49,7 @@ func (s StaticAuth) GetAuth(_ *http.Request, options ...jwt.ValidateOption) (*jw
 	block, _ := pem.Decode(s.Public)
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse public key: %w", err)
 	}
 
 	return jwtauth.New(s.Algorythm, nil, pub, options...), nil
