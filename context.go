@@ -77,23 +77,6 @@ func GetUser[T any](ctx context.Context) (*T, bool) {
 }
 
 //
-// Project
-//
-
-// WithProject adds the project to the context.
-//
-// TODO: Deprecate this in favor of Session middleware with a JWT token.
-func WithProject(ctx context.Context, project any) context.Context {
-	return context.WithValue(ctx, ctxKeyProject, project)
-}
-
-// GetProject returns the project from the context.
-func GetProject[T any](ctx context.Context) (*T, bool) {
-	v, ok := ctx.Value(ctxKeyProject).(*T)
-	return v, ok
-}
-
-//
 // Service
 //
 
@@ -142,5 +125,22 @@ func WithProjectID(ctx context.Context, project uint64) context.Context {
 // In case its not set, it will return 0.
 func GetProjectID(ctx context.Context) (uint64, bool) {
 	v, ok := ctx.Value(ctxKeyProjectID).(uint64)
+	return v, ok
+}
+
+//
+// Project
+//
+
+// WithProject adds the project to the context.
+//
+// TODO: Deprecate this in favor of Session middleware with a JWT token.
+func WithProject(ctx context.Context, project any) context.Context {
+	return context.WithValue(ctx, ctxKeyProject, project)
+}
+
+// GetProject returns the project from the context.
+func GetProject[T any](ctx context.Context) (*T, bool) {
+	v, ok := ctx.Value(ctxKeyProject).(*T)
 	return v, ok
 }

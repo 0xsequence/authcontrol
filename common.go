@@ -51,7 +51,7 @@ type UserStore interface {
 
 // ProjectStore is a pluggable backend that verifies if a project exists.
 type ProjectStore interface {
-	GetProject(ctx context.Context, projectID uint64) (project any, auth *Auth, err error)
+	GetProject(ctx context.Context, id uint64) (project any, auth *Auth, err error)
 }
 
 // Config is a generic map of services/methods to a config value.

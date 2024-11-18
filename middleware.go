@@ -130,7 +130,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			// check if the request already contains session, if it does then continue
+			// if a custom middleware already sets the session type, skip this middleware
 			if _, ok := GetSessionType(ctx); ok {
 				next.ServeHTTP(w, r)
 				return
