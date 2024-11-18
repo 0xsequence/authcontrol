@@ -375,7 +375,7 @@ func TestOrigin(t *testing.T) {
 
 type MockAuthStore map[uint64]authcontrol.StaticAuth
 
-func (m MockAuthStore) GetAuth(ctx context.Context, projectID uint64) (*authcontrol.StaticAuth, error) {
+func (m MockAuthStore) GetJWTAuth(ctx context.Context, projectID uint64) (*authcontrol.StaticAuth, error) {
 	auth, ok := m[projectID]
 	if !ok {
 		return nil, nil
@@ -402,7 +402,7 @@ func TestProjectVerifier(t *testing.T) {
 	projectID := uint64(7)
 
 	authStore[projectID] = authcontrol.StaticAuth{
-		Algorythm: authcontrol.DefaultAlgorythm,
+		Algorythm: authcontrol.DefaultAlgorithm,
 		Private:   []byte(JWTSecret),
 	}
 

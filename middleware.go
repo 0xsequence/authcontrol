@@ -53,7 +53,7 @@ func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			auth, err := cfg.Verifier.GetAuth(r, jwtOptions...)
+			auth, err := cfg.Verifier.GetJWTAuth(r, jwtOptions...)
 			if err != nil {
 				cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get verifier: %w", err))
 				return
