@@ -128,11 +128,9 @@ func (t ACL) Includes(session proto.SessionType) bool {
 	return t&ACL(1<<session) != 0
 }
 
-const DefaultAlgorithm = jwa.HS256
-
-// newAuth creates a new AuthProvider with a static secret
-func newAuth(secret string) *Auth {
-	return &Auth{Algorithm: DefaultAlgorithm, Private: []byte(secret)}
+// NewAuth creates a new Auth HS256 with the given secret.
+func NewAuth(secret string) *Auth {
+	return &Auth{Algorithm: jwa.HS256, Private: []byte(secret)}
 }
 
 // Auth is a struct that holds the private and public keys for JWT signing and verification.

@@ -56,7 +56,7 @@ func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			auth := newAuth(cfg.JWTSecret)
+			auth := NewAuth(cfg.JWTSecret)
 
 			if cfg.ProjectStore != nil {
 				projectID, err := findProjectClaim(r)

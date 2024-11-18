@@ -14,7 +14,7 @@ import (
 func TestS2SToken(t *testing.T) {
 	token := authcontrol.S2SToken(JWTSecret, map[string]any{"service": "test"})
 
-	auth := jwtauth.New(string(authcontrol.DefaultAlgorithm), []byte(JWTSecret), nil)
+	auth := jwtauth.New("HS256", []byte(JWTSecret), nil)
 
 	jwt, err := jwtauth.VerifyToken(auth, token)
 	require.NoError(t, err)

@@ -373,14 +373,14 @@ func TestOrigin(t *testing.T) {
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 }
 
-type MockProjectStore map[uint64]authcontrol.Auth
+type MockProjectStore map[uint64]*authcontrol.Auth
 
 func (m MockProjectStore) GetProject(ctx context.Context, projectID uint64) (any, *authcontrol.Auth, error) {
 	auth, ok := m[projectID]
 	if !ok {
 		return nil, nil, nil
 	}
-	return struct{}{}, &auth, nil
+	return struct{}{}, auth, nil
 }
 
 func TestProjectVerifier(t *testing.T) {
@@ -399,10 +399,7 @@ func TestProjectVerifier(t *testing.T) {
 
 	projectID := uint64(7)
 
-	authStore[projectID] = authcontrol.Auth{
-		Algorithm: authcontrol.DefaultAlgorithm,
-		Private:   []byte(JWTSecret),
-	}
+	authStore[projectID] = authcontrol.NewAuth(JWTSecret)
 
 	token := authcontrol.S2SToken(JWTSecret, map[string]any{
 		"project_id": projectID,
@@ -424,7 +421,7 @@ func TestProjectVerifier(t *testing.T) {
 		Bytes: publicRaw,
 	})
 
-	authStore[projectID] = authcontrol.Auth{
+	authStore[projectID] = &authcontrol.Auth{
 		Algorithm: "RS256",
 		Public:    public,
 	}
