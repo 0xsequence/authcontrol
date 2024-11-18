@@ -106,5 +106,5 @@ func (p ProjectProvider) GetJWTAuth(req *http.Request, options ...jwt.ValidateOp
 		return nil, fmt.Errorf("auth not found")
 	}
 
-	return auth.GetJWTAuth(req, options...)
+	return auth.GetJWTAuth(nil, options...)
 }
