@@ -70,7 +70,7 @@ func TestSession(t *testing.T) {
 	)
 
 	options := authcontrol.Options{
-		Verifier: authcontrol.NewAuth(JWTSecret),
+		JWTSecret: JWTSecret,
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -191,7 +191,7 @@ func TestInvalid(t *testing.T) {
 	)
 
 	options := authcontrol.Options{
-		Verifier: authcontrol.NewAuth(JWTSecret),
+		JWTSecret: JWTSecret,
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -302,7 +302,7 @@ func TestCustomErrHandler(t *testing.T) {
 	}
 
 	opts := authcontrol.Options{
-		Verifier: authcontrol.NewAuth(JWTSecret),
+		JWTSecret: JWTSecret,
 		UserStore: MockUserStore{
 			UserAddress:  false,
 			AdminAddress: true,
@@ -344,7 +344,7 @@ func TestOrigin(t *testing.T) {
 	ctx := context.Background()
 
 	opts := authcontrol.Options{
-		Verifier: authcontrol.NewAuth(JWTSecret),
+		JWTSecret: JWTSecret,
 	}
 
 	r := chi.NewRouter()
@@ -373,25 +373,23 @@ func TestOrigin(t *testing.T) {
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
 }
 
-type MockAuthStore map[uint64]authcontrol.StaticAuth
+type MockProjectStore map[uint64]authcontrol.Auth
 
-func (m MockAuthStore) GetJWTAuth(ctx context.Context, projectID uint64) (*authcontrol.StaticAuth, error) {
+func (m MockProjectStore) GetProject(ctx context.Context, projectID uint64) (any, *authcontrol.Auth, error) {
 	auth, ok := m[projectID]
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
-	return &auth, nil
+	return struct{}{}, &auth, nil
 }
 
 func TestProjectVerifier(t *testing.T) {
 	ctx := context.Background()
 
-	authStore := MockAuthStore{}
+	authStore := MockProjectStore{}
 
 	opts := authcontrol.Options{
-		Verifier: authcontrol.ProjectProvider{
-			Store: authStore,
-		},
+		ProjectStore: authStore,
 	}
 
 	r := chi.NewRouter()
@@ -401,7 +399,7 @@ func TestProjectVerifier(t *testing.T) {
 
 	projectID := uint64(7)
 
-	authStore[projectID] = authcontrol.StaticAuth{
+	authStore[projectID] = authcontrol.Auth{
 		Algorithm: authcontrol.DefaultAlgorithm,
 		Private:   []byte(JWTSecret),
 	}
@@ -426,7 +424,7 @@ func TestProjectVerifier(t *testing.T) {
 		Bytes: publicRaw,
 	})
 
-	authStore[projectID] = authcontrol.StaticAuth{
+	authStore[projectID] = authcontrol.Auth{
 		Algorithm: "RS256",
 		Public:    public,
 	}

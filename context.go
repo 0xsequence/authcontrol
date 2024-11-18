@@ -21,6 +21,7 @@ var (
 	ctxKeyService     = &contextKey{"Service"}
 	ctxKeyAccessKey   = &contextKey{"AccessKey"}
 	ctxKeyProjectID   = &contextKey{"ProjectID"}
+	ctxKeyProject     = &contextKey{"Project"}
 )
 
 //
@@ -72,6 +73,23 @@ func WithUser(ctx context.Context, user any) context.Context {
 // GetUser returns the user from the context.
 func GetUser[T any](ctx context.Context) (*T, bool) {
 	v, ok := ctx.Value(ctxKeyUser).(*T)
+	return v, ok
+}
+
+//
+// Project
+//
+
+// WithProject adds the project to the context.
+//
+// TODO: Deprecate this in favor of Session middleware with a JWT token.
+func WithProject(ctx context.Context, project any) context.Context {
+	return context.WithValue(ctx, ctxKeyProject, project)
+}
+
+// GetProject returns the project from the context.
+func GetProject[T any](ctx context.Context) (*T, bool) {
+	v, ok := ctx.Value(ctxKeyProject).(*T)
 	return v, ok
 }
 

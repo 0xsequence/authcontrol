@@ -17,7 +17,10 @@ import (
 // Options for the authcontrol middleware handlers Session and AccessControl.
 type Options struct {
 	// JWT secret used to verify the JWT token.
-	Verifier AuthProvider
+	JWTSecret string
+
+	// ProjectStore is a pluggable backends that verifies if the project exists.
+	ProjectStore ProjectStore
 
 	// AccessKeyFuncs are used to extract the access key from the request.
 	AccessKeyFuncs []AccessKeyFunc
@@ -53,13 +56,37 @@ func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			auth, err := cfg.Verifier.GetJWTAuth(r, jwtOptions...)
+			auth := newAuth(cfg.JWTSecret)
+
+			if cfg.ProjectStore != nil {
+				projectID, err := findProjectClaim(r)
+				if err != nil {
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get project claim: %w", err))
+					return
+				}
+
+				project, _auth, err := cfg.ProjectStore.GetProject(ctx, projectID)
+				if err != nil {
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get project: %w", err))
+					return
+				}
+				if project == nil {
+					cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
+					return
+				}
+				if _auth != nil {
+					auth = _auth
+				}
+				ctx = WithProject(ctx, project)
+			}
+
+			jwtAuth, err := auth.GetVerifier(jwtOptions...)
 			if err != nil {
 				cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get verifier: %w", err))
 				return
 			}
 
-			token, err := jwtauth.VerifyRequest(auth, r, jwtauth.TokenFromHeader)
+			token, err := jwtauth.VerifyRequest(jwtAuth, r, jwtauth.TokenFromHeader)
 			if err != nil {
 				if errors.Is(err, jwtauth.ErrExpired) {
 					cfg.ErrHandler(r, w, proto.ErrSessionExpired)
