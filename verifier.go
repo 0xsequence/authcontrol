@@ -22,24 +22,24 @@ type AuthProvider interface {
 
 // NewAuth creates a new AuthProvider with a static secret
 func NewAuth(secret string) AuthProvider {
-	return StaticAuth{Algorythm: DefaultAlgorithm, Private: []byte(secret)}
+	return StaticAuth{Algorithm: DefaultAlgorithm, Private: []byte(secret)}
 }
 
 // StaticAuth is an AuthProvider with a static configuration
 type StaticAuth struct {
-	Algorythm jwa.SignatureAlgorithm
+	Algorithm jwa.SignatureAlgorithm
 	Private   []byte
 	Public    []byte
 }
 
 // GetJWTAuth returns a JWTAuth using the private secret when available, otherwise the public key
 func (s StaticAuth) GetJWTAuth(_ *http.Request, options ...jwt.ValidateOption) (*jwtauth.JWTAuth, error) {
-	if s.Algorythm == "" {
+	if s.Algorithm == "" {
 		return nil, fmt.Errorf("missing algorithm")
 	}
 
 	if s.Private != nil {
-		return jwtauth.New(s.Algorythm, s.Private, s.Private, options...), nil
+		return jwtauth.New(string(s.Algorithm), s.Private, s.Private, options...), nil
 	}
 
 	if s.Public == nil {
@@ -52,7 +52,7 @@ func (s StaticAuth) GetJWTAuth(_ *http.Request, options ...jwt.ValidateOption) (
 		return nil, fmt.Errorf("parse public key: %w", err)
 	}
 
-	return jwtauth.New(s.Algorythm, nil, pub, options...), nil
+	return jwtauth.New(string(s.Algorithm), nil, pub, options...), nil
 }
 
 // AuthStore is an interface for getting a StaticAuth by project ID

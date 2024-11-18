@@ -402,7 +402,7 @@ func TestProjectVerifier(t *testing.T) {
 	projectID := uint64(7)
 
 	authStore[projectID] = authcontrol.StaticAuth{
-		Algorythm: authcontrol.DefaultAlgorithm,
+		Algorithm: authcontrol.DefaultAlgorithm,
 		Private:   []byte(JWTSecret),
 	}
 
@@ -427,7 +427,7 @@ func TestProjectVerifier(t *testing.T) {
 	})
 
 	authStore[projectID] = authcontrol.StaticAuth{
-		Algorythm: "RS256",
+		Algorithm: "RS256",
 		Public:    public,
 	}
 
