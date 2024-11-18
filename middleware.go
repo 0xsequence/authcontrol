@@ -199,6 +199,7 @@ func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Ha
 }
 
 // PropagateAccessKey propagates the access key from the context to other webrpc packages.
+// It expectes the function `WithHTTPRequestHeaders` from the proto package that requires the access key propogation.
 func PropagateAccessKey(headerContextFuncs ...func(context.Context, http.Header) (context.Context, error)) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
