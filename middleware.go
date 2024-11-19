@@ -16,16 +16,20 @@ import (
 
 // Options for the authcontrol middleware handlers Session and AccessControl.
 type Options struct {
-	// JWT secret used to verify the JWT token.
+	// JWTsecret is required, and it is used for the JWT verification.
+	// If a Project Store is also provided and the request has a project claim,
+	// it could be replaced by the a specific verifier.
 	JWTSecret string
 
-	// ProjectStore is a pluggable backends that verifies if the project exists.
+	// ProjectStore is a pluggable backends that verifies if the project from the claim exists.
+	// When provived, it checks the Project from the JWT, and can override the JWT Auth.
 	ProjectStore ProjectStore
 
 	// AccessKeyFuncs are used to extract the access key from the request.
 	AccessKeyFuncs []AccessKeyFunc
 
 	// UserStore is a pluggable backends that verifies if the account exists.
+	// When provided, it can upgrade a Wallet session to a User or Admin session.
 	UserStore UserStore
 
 	// ErrHandler is a function that is used to handle and respond to errors.

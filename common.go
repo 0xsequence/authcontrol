@@ -50,6 +50,8 @@ type UserStore interface {
 }
 
 // ProjectStore is a pluggable backend that verifies if a project exists.
+// If the project does not exist, it should return nil, nil, nil.
+// The optional Auth, when returned, will be used for instead of the standard one.
 type ProjectStore interface {
 	GetProject(ctx context.Context, id uint64) (project any, auth *Auth, err error)
 }
