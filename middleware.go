@@ -65,23 +65,26 @@ func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 			if cfg.ProjectStore != nil {
 				projectID, err := findProjectClaim(r)
 				if err != nil {
-					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get project claim: %w", err))
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("find project claim: %w", err))
 					return
 				}
 
-				project, _auth, err := cfg.ProjectStore.GetProject(ctx, projectID)
-				if err != nil {
-					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get project: %w", err))
-					return
+				if projectID != 0 {
+					project, _auth, err := cfg.ProjectStore.GetProject(ctx, projectID)
+					if err != nil {
+						cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get project: %w", err))
+						return
+					}
+					if project == nil {
+						cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
+						return
+					}
+					if _auth != nil {
+						auth = _auth
+					}
+					ctx = WithProject(ctx, project)
 				}
-				if project == nil {
-					cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
-					return
-				}
-				if _auth != nil {
-					auth = _auth
-				}
-				ctx = WithProject(ctx, project)
+
 			}
 
 			jwtAuth, err := auth.GetVerifier(jwtOptions...)

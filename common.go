@@ -168,7 +168,10 @@ func (a Auth) GetVerifier(options ...jwt.ValidateOption) (*jwtauth.JWTAuth, erro
 
 // findProjectClaim looks for the project_id/project claim in the JWT
 func findProjectClaim(r *http.Request) (uint64, error) {
-	raw := cmp.Or(jwtauth.TokenFromHeader(r))
+	raw := jwtauth.TokenFromHeader(r)
+	if raw == "" {
+		return 0, nil
+	}
 
 	token, err := jwt.ParseString(raw, jwt.WithVerify(false))
 	if err != nil {
@@ -179,7 +182,7 @@ func findProjectClaim(r *http.Request) (uint64, error) {
 
 	claim := cmp.Or(claims["project_id"], claims["project"])
 	if claim == nil {
-		return 0, fmt.Errorf("missing project claim")
+		return 0, nil
 	}
 
 	switch val := claim.(type) {
