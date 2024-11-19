@@ -2,7 +2,11 @@ package authcontrol_test
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,7 +14,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/0xsequence/authcontrol"
 	"github.com/0xsequence/authcontrol/proto"
@@ -29,17 +35,6 @@ func (m MockUserStore) GetUser(ctx context.Context, address string) (user any, i
 		return nil, false, nil
 	}
 	return struct{}{}, v, nil
-}
-
-// MockProjectStore is a simple in-memory Project store for testing, it stores the project.
-type MockProjectStore map[uint64]struct{}
-
-// GetProject returns the project from the store.
-func (m MockProjectStore) GetProject(ctx context.Context, id uint64) (project any, err error) {
-	if _, ok := m[id]; !ok {
-		return nil, nil
-	}
-	return struct{}{}, nil
 }
 
 func TestSession(t *testing.T) {
@@ -80,17 +75,14 @@ func TestSession(t *testing.T) {
 			UserAddress:  false,
 			AdminAddress: true,
 		},
-		ProjectStore: MockProjectStore{
-			ProjectID: struct{}{},
-		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
 
 	r := chi.NewRouter()
-	r.Use(
-		authcontrol.Session(options),
-		authcontrol.AccessControl(ACLConfig, options),
-	)
+	r.Use(authcontrol.VerifyToken(options))
+	r.Use(authcontrol.Session(options))
+	r.Use(authcontrol.AccessControl(ACLConfig, options))
+
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	ctx := context.Background()
@@ -204,13 +196,11 @@ func TestInvalid(t *testing.T) {
 			UserAddress:  false,
 			AdminAddress: true,
 		},
-		ProjectStore: MockProjectStore{
-			ProjectID: struct{}{},
-		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
 	}
 
 	r := chi.NewRouter()
+	r.Use(authcontrol.VerifyToken(options))
 	r.Use(authcontrol.Session(options))
 	r.Use(authcontrol.AccessControl(ACLConfig, options))
 
@@ -281,12 +271,6 @@ func TestInvalid(t *testing.T) {
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), accessKey(AccessKey), jwt(expiredJWT))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
-
-	// Invalid Project
-	wrongProject := authcontrol.S2SToken(JWTSecret, map[string]any{"account": WalletAddress, "project_id": ProjectID + 1})
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), jwt(wrongProject))
-	assert.False(t, ok)
-	assert.ErrorIs(t, err, proto.ErrProjectNotFound)
 }
 
 func TestCustomErrHandler(t *testing.T) {
@@ -336,10 +320,10 @@ func TestCustomErrHandler(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(
-		authcontrol.Session(opts),
-		authcontrol.AccessControl(ACLConfig, opts),
-	)
+	r.Use(authcontrol.VerifyToken(opts))
+	r.Use(authcontrol.Session(opts))
+	r.Use(authcontrol.AccessControl(ACLConfig, opts))
+
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	var claims map[string]any
@@ -364,6 +348,7 @@ func TestOrigin(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
+	r.Use(authcontrol.VerifyToken(opts))
 	r.Use(authcontrol.Session(opts))
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
@@ -386,4 +371,67 @@ func TestOrigin(t *testing.T) {
 	ok, err = executeRequest(t, ctx, r, "", jwt(token), origin("http://evil.com"))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrUnauthorized)
+}
+
+type MockProjectStore map[uint64]*authcontrol.Auth
+
+func (m MockProjectStore) GetProject(ctx context.Context, projectID uint64) (any, *authcontrol.Auth, error) {
+	auth, ok := m[projectID]
+	if !ok {
+		return nil, nil, nil
+	}
+	return struct{}{}, auth, nil
+}
+
+func TestProjectVerifier(t *testing.T) {
+	ctx := context.Background()
+
+	authStore := MockProjectStore{}
+
+	opts := authcontrol.Options{
+		ProjectStore: authStore,
+	}
+
+	r := chi.NewRouter()
+	r.Use(authcontrol.VerifyToken(opts))
+	r.Use(authcontrol.Session(opts))
+	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+	projectID := uint64(7)
+
+	authStore[projectID] = authcontrol.NewAuth(JWTSecret)
+
+	token := authcontrol.S2SToken(JWTSecret, map[string]any{
+		"project_id": projectID,
+	})
+
+	ok, err := executeRequest(t, ctx, r, "", jwt(token))
+	assert.True(t, ok)
+	assert.NoError(t, err)
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	require.NoError(t, err)
+	require.NoError(t, privateKey.Validate())
+
+	publicRaw, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err)
+
+	public := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PUBLIC KEY",
+		Bytes: publicRaw,
+	})
+
+	authStore[projectID] = &authcontrol.Auth{
+		Algorithm: "RS256",
+		Public:    public,
+	}
+
+	_, token, err = jwtauth.New("RS256", privateKey, nil).Encode(map[string]any{
+		"project_id": projectID,
+	})
+	require.NoError(t, err)
+
+	ok, err = executeRequest(t, ctx, r, "", jwt(token))
+	assert.True(t, ok)
+	assert.NoError(t, err)
 }

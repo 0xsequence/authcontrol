@@ -20,8 +20,8 @@ var (
 	ctxKeyUser        = &contextKey{"User"}
 	ctxKeyService     = &contextKey{"Service"}
 	ctxKeyAccessKey   = &contextKey{"AccessKey"}
-	ctxKeyProject     = &contextKey{"Project"}
 	ctxKeyProjectID   = &contextKey{"ProjectID"}
+	ctxKeyProject     = &contextKey{"Project"}
 )
 
 //

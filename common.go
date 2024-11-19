@@ -1,14 +1,21 @@
 package authcontrol
 
 import (
+	"cmp"
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/0xsequence/authcontrol/proto"
+	"github.com/go-chi/jwtauth/v5"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 const (
@@ -42,10 +49,11 @@ type UserStore interface {
 	GetUser(ctx context.Context, address string) (user any, isAdmin bool, err error)
 }
 
-// ProjectStore is a pluggable backend that verifies if the project exists.
-// If the project doesn't exist, it should return nil, nil.
+// ProjectStore is a pluggable backend that verifies if a project exists.
+// If the project does not exist, it should return nil, nil, nil.
+// The optional Auth, when returned, will be used for instead of the standard one.
 type ProjectStore interface {
-	GetProject(ctx context.Context, id uint64) (project any, err error)
+	GetProject(ctx context.Context, id uint64) (project any, auth *Auth, err error)
 }
 
 // Config is a generic map of services/methods to a config value.
@@ -120,4 +128,70 @@ func (a ACL) And(session ...proto.SessionType) ACL {
 // Includes returns true if the ACL includes the given session type.
 func (t ACL) Includes(session proto.SessionType) bool {
 	return t&ACL(1<<session) != 0
+}
+
+// NewAuth creates a new Auth HS256 with the given secret.
+func NewAuth(secret string) *Auth {
+	return &Auth{Algorithm: jwa.HS256, Private: []byte(secret)}
+}
+
+// Auth is a struct that holds the private and public keys for JWT signing and verification.
+type Auth struct {
+	Algorithm jwa.SignatureAlgorithm
+	Private   []byte
+	Public    []byte
+}
+
+// GetVerifier returns a JWTAuth using the private secret when available, otherwise the public key
+func (a Auth) GetVerifier(options ...jwt.ValidateOption) (*jwtauth.JWTAuth, error) {
+	if a.Algorithm == "" {
+		return nil, fmt.Errorf("missing algorithm")
+	}
+
+	if a.Private != nil {
+		return jwtauth.New(string(a.Algorithm), a.Private, a.Private, options...), nil
+	}
+
+	if a.Public == nil {
+		return nil, fmt.Errorf("missing public key")
+	}
+
+	block, _ := pem.Decode(a.Public)
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse public key: %w", err)
+	}
+
+	return jwtauth.New(a.Algorithm.String(), nil, pub, options...), nil
+}
+
+// findProjectClaim looks for the project_id/project claim in the JWT
+func findProjectClaim(r *http.Request) (uint64, error) {
+	raw := cmp.Or(jwtauth.TokenFromHeader(r))
+
+	token, err := jwt.ParseString(raw, jwt.WithVerify(false))
+	if err != nil {
+		return 0, fmt.Errorf("parse token: %w", err)
+	}
+
+	claims := token.PrivateClaims()
+
+	claim := cmp.Or(claims["project_id"], claims["project"])
+	if claim == nil {
+		return 0, fmt.Errorf("missing project claim")
+	}
+
+	switch val := claim.(type) {
+	case float64:
+		return uint64(val), nil
+	case string:
+		v, err := strconv.ParseUint(val, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid value")
+		}
+		return v, nil
+	default:
+		return 0, fmt.Errorf("invalid type: %T", val)
+	}
 }

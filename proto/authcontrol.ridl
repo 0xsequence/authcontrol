@@ -1,6 +1,6 @@
 webrpc = v1
 
-name = access-control
+name = authcontrol
 version = v0.9.0
 
 enum SessionType: uint16

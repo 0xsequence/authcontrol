@@ -16,17 +16,21 @@ import (
 
 // Options for the authcontrol middleware handlers Session and AccessControl.
 type Options struct {
-	// JWT secret used to verify the JWT token.
+	// JWTsecret is required, and it is used for the JWT verification.
+	// If a Project Store is also provided and the request has a project claim,
+	// it could be replaced by the a specific verifier.
 	JWTSecret string
+
+	// ProjectStore is a pluggable backends that verifies if the project from the claim exists.
+	// When provived, it checks the Project from the JWT, and can override the JWT Auth.
+	ProjectStore ProjectStore
 
 	// AccessKeyFuncs are used to extract the access key from the request.
 	AccessKeyFuncs []AccessKeyFunc
 
 	// UserStore is a pluggable backends that verifies if the account exists.
+	// When provided, it can upgrade a Wallet session to a User or Admin session.
 	UserStore UserStore
-
-	// ProjectStore is a pluggable backends that verifies if the project exists.
-	ProjectStore ProjectStore
 
 	// ErrHandler is a function that is used to handle and respond to errors.
 	ErrHandler ErrHandler
@@ -46,34 +50,47 @@ func (o *Options) ApplyDefaults() {
 	}
 }
 
-func Session(cfg Options) func(next http.Handler) http.Handler {
+func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
-	auth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil, jwt.WithAcceptableSkew(2*time.Minute))
+	jwtOptions := []jwt.ValidateOption{
+		jwt.WithAcceptableSkew(2 * time.Minute),
+	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			// check if the request already contains session, if it does then continue
-			if _, ok := GetSessionType(ctx); ok {
-				next.ServeHTTP(w, r)
+			auth := NewAuth(cfg.JWTSecret)
+
+			if cfg.ProjectStore != nil {
+				projectID, err := findProjectClaim(r)
+				if err != nil {
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get project claim: %w", err))
+					return
+				}
+
+				project, _auth, err := cfg.ProjectStore.GetProject(ctx, projectID)
+				if err != nil {
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get project: %w", err))
+					return
+				}
+				if project == nil {
+					cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
+					return
+				}
+				if _auth != nil {
+					auth = _auth
+				}
+				ctx = WithProject(ctx, project)
+			}
+
+			jwtAuth, err := auth.GetVerifier(jwtOptions...)
+			if err != nil {
+				cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get verifier: %w", err))
 				return
 			}
 
-			var (
-				sessionType proto.SessionType
-				accessKey   string
-				token       jwt.Token
-			)
-
-			for _, f := range cfg.AccessKeyFuncs {
-				if accessKey = f(r); accessKey != "" {
-					break
-				}
-			}
-
-			// Verify JWT token and validate its claims.
-			token, err := jwtauth.VerifyRequest(auth, r, jwtauth.TokenFromHeader)
+			token, err := jwtauth.VerifyRequest(jwtAuth, r, jwtauth.TokenFromHeader)
 			if err != nil {
 				if errors.Is(err, jwtauth.ErrExpired) {
 					cfg.ErrHandler(r, w, proto.ErrSessionExpired)
@@ -89,7 +106,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			if token != nil {
 				claims, err := token.AsMap(ctx)
 				if err != nil {
-					cfg.ErrHandler(r, w, err)
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("invalid token: %w", err))
 					return
 				}
 
@@ -102,6 +119,44 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 					}
 				}
 
+				ctx = jwtauth.NewContext(ctx, token, nil)
+			}
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func Session(cfg Options) func(next http.Handler) http.Handler {
+	cfg.ApplyDefaults()
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+
+			// if a custom middleware already sets the session type, skip this middleware
+			if _, ok := GetSessionType(ctx); ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			var (
+				accessKey   string
+				sessionType proto.SessionType
+			)
+
+			for _, f := range cfg.AccessKeyFuncs {
+				if accessKey = f(r); accessKey != "" {
+					break
+				}
+			}
+
+			_, claims, err := jwtauth.FromContext(ctx)
+			if err != nil {
+				cfg.ErrHandler(r, w, err)
+				return
+			}
+			if claims != nil {
 				serviceClaim, _ := claims["service"].(string)
 				accountClaim, _ := claims["account"].(string)
 				adminClaim, _ := claims["admin"].(bool)
@@ -140,20 +195,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 					}
 
 					if projectClaim > 0 {
-						projectID := uint64(projectClaim)
-						if cfg.ProjectStore != nil {
-							project, err := cfg.ProjectStore.GetProject(ctx, projectID)
-							if err != nil {
-								cfg.ErrHandler(r, w, err)
-								return
-							}
-							if project == nil {
-								cfg.ErrHandler(r, w, proto.ErrProjectNotFound)
-								return
-							}
-							ctx = WithProject(ctx, project)
-						}
-						ctx = WithProjectID(ctx, projectID)
+						ctx = WithProjectID(ctx, uint64(projectClaim))
 						sessionType = proto.SessionType_Project
 					}
 				}

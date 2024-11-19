@@ -5,10 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/traceid"
 	"github.com/go-chi/transport"
-	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 type S2SClientConfig struct {
@@ -34,8 +32,7 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 
 // Create short-lived service-to-service JWT token for internal communication between Sequence services.
 func S2SToken(jwtSecret string, claims map[string]any) string {
-	jwtAuth := jwtauth.New("HS256", []byte(jwtSecret), nil, jwt.WithAcceptableSkew(2*time.Minute))
-
+	jwtAuth, _ := NewAuth(jwtSecret).GetVerifier(nil)
 	now := time.Now().UTC()
 
 	c := maps.Clone(claims)

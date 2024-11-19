@@ -7,6 +7,7 @@ import (
 
 	"github.com/0xsequence/authcontrol"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,12 +24,8 @@ func TestS2SToken(t *testing.T) {
 	require.NoError(t, err)
 
 	expiresIn := time.Until(jwt.Expiration())
-	if expiresIn < 29*time.Second {
-		t.Errorf("expected default expiry to be at least 30s, got %v", expiresIn)
-	}
+	assert.Greater(t, expiresIn, 29*time.Second)
 
 	service := claims["service"].(string)
-	if service != "test" {
-		t.Errorf("unexpected service claim, got %q", service)
-	}
+	assert.Equal(t, "test", service)
 }
