@@ -185,7 +185,6 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 
 						if user != nil {
 							ctx = WithUser(ctx, user)
-
 							sessionType = proto.SessionType_User
 							if isAdmin {
 								sessionType = proto.SessionType_Admin
@@ -196,11 +195,11 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 					if adminClaim {
 						sessionType = proto.SessionType_Admin
 					}
+				}
 
-					if projectClaim > 0 {
-						ctx = WithProjectID(ctx, uint64(projectClaim))
-						sessionType = proto.SessionType_Project
-					}
+				if projectClaim > 0 {
+					ctx = WithProjectID(ctx, uint64(projectClaim))
+					sessionType = max(sessionType, proto.SessionType_Project)
 				}
 			}
 
