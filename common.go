@@ -61,7 +61,7 @@ type ProjectStore interface {
 type Config[T any] map[string]map[string]T
 
 // Get returns the config value for the given request.
-func (c Config[T]) Get(path string) (v T, err error) {
+func (c Config[T]) Get(_ context.Context, path string) (v T, err error) {
 	if c == nil {
 		return v, fmt.Errorf("config is nil")
 	}

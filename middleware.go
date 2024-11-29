@@ -221,13 +221,14 @@ func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Ha
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			acl, err := acl.Get(r.URL.Path)
+			ctx := r.Context()
+			acl, err := acl.Get(ctx, r.URL.Path)
 			if err != nil {
 				cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get acl: %w", err))
 				return
 			}
 
-			if session, _ := GetSessionType(r.Context()); !acl.Includes(session) {
+			if session, _ := GetSessionType(ctx); !acl.Includes(session) {
 				err := proto.ErrPermissionDenied
 				if session == proto.SessionType_Public {
 					err = proto.ErrUnauthorized
