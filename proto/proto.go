@@ -1,5 +1,5 @@
-//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=golang@v0.17.0 -pkg=proto -client -out=./authcontrol.gen.go
-//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=typescript@v0.16.1 -client -out=./authcontrol.gen.ts
+//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=golang -pkg=proto -client -out=./authcontrol.gen.go
+//go:generate go run github.com/webrpc/webrpc/cmd/webrpc-gen -schema=authcontrol.ridl -target=typescript -client -out=./authcontrol.gen.ts
 package proto
 
 const SessionType_Max SessionType = SessionType_InternalService + 1
