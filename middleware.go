@@ -1,9 +1,9 @@
 package authcontrol
 
 import (
-	"cmp"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -143,10 +143,8 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				return
 			}
 
-			var (
-				accessKey   string
-				sessionType proto.SessionType
-			)
+			sessionType := proto.SessionType_Public
+			var accessKey string
 
 			for _, f := range cfg.AccessKeyFuncs {
 				if accessKey = f(r); accessKey != "" {
@@ -163,15 +161,18 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				serviceClaim, _ := claims["service"].(string)
 				accountClaim, _ := claims["account"].(string)
 				adminClaim, _ := claims["admin"].(bool)
-				// We support both claims for now, we'll deprecate one if we can.
-				// - `project` is used by the builder to generate Project JWT tokens.
-				// - `project_id` is used by API for WaaS related authentication.
-				projectClaim, _ := cmp.Or(claims["project"], claims["project_id"]).(float64)
+
+				// - `project` claim is used in Builder Admin API Secret Keys (JWT used by third-party customers).
+				projectClaim, _ := claims["project"].(float64)
+
+				// - `project_id` claim is used by API->WaaS related authentication.
+				projectIDClaim, _ := claims["project_id"].(float64)
 
 				switch {
 				case serviceClaim != "":
 					ctx = WithService(ctx, serviceClaim)
 					sessionType = proto.SessionType_InternalService
+
 				case accountClaim != "":
 					ctx = WithAccount(ctx, accountClaim)
 					sessionType = proto.SessionType_Wallet
@@ -200,6 +201,32 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				if projectClaim > 0 {
 					ctx = WithProjectID(ctx, uint64(projectClaim))
 					sessionType = max(sessionType, proto.SessionType_Project)
+				} else if projectIDClaim > 0 {
+					ctx = WithProjectID(ctx, uint64(projectIDClaim))
+					sessionType = max(sessionType, proto.SessionType_Project)
+				}
+
+				// Restrict CORS for Builder Admin API Secret Keys.
+				// These keys are designed for backend service use by third-party customers, not for web apps.
+				if accountClaim != "" && projectClaim > 0 {
+					// Secret Keys are distinguished from Wallet JWTs or Builder session JWTs
+					// by the presence of both `project` and `account` claims. (As of Dec '24)
+					// Related discussion: https://github.com/0xsequence/issue-tracker/issues/3802.
+
+					origin := r.Header.Get("Origin")
+					if origin != "" {
+						err := proto.ErrSecretKeyCorsDisallowed.WithCausef("project_id: %v", projectClaim)
+
+						slog.ErrorContext(ctx, "CORS disallowed for Secret Key",
+							slog.Any("error", err),
+							slog.String("origin", origin),
+							slog.Uint64("project_id", uint64(projectClaim)),
+						)
+
+						// TODO: Uncomment once we're confident it won't disrupt major customers.
+						// cfg.ErrHandler(r, w, err)
+						// return
+					}
 				}
 			}
 
