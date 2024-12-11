@@ -24,6 +24,10 @@ test-coverage-inspect: test-coverage
 generate:
 	go generate -x ./...
 
+.PHONY: proto
+proto:
+	go generate -x ./proto/...
+
 lint:
 	golangci-lint run ./... --fix -c .golangci.yml
 
