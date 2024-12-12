@@ -68,7 +68,7 @@ func (c Config[T]) Get(_ context.Context, path string) (v T, err error) {
 
 	p := strings.Split(path, "/")
 	if len(p) < 4 {
-		return v, fmt.Errorf("path has not enough parts")
+		return v, fmt.Errorf("path has not enough parts: %s", path)
 	}
 
 	var (
@@ -78,12 +78,12 @@ func (c Config[T]) Get(_ context.Context, path string) (v T, err error) {
 	)
 
 	if packageName != "rpc" {
-		return v, fmt.Errorf("path doesn't include rpc")
+		return v, fmt.Errorf("path doesn't include rpc: %s", path)
 	}
 
 	v, ok := c[serviceName][methodName]
 	if !ok {
-		return v, fmt.Errorf("acl not found")
+		return v, fmt.Errorf("acl not defined for path: %s", path)
 	}
 
 	return v, nil
