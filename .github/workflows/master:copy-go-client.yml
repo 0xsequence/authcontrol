@@ -1,0 +1,13 @@
+name: copy-ridl-errors
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "proto/authcontrol.errors.ridl"
+
+jobs:
+  run:
+    uses: ./.github/workflows/copy-ridl-errors.yml
+    secrets: inherit
