@@ -1,0 +1,23 @@
+name: copy-ridl-errors
+
+on:
+  workflow_call:
+
+jobs:
+  copy-ridl-errors:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update quotacontrol
+        uses: 0xsequence/actions/git-copy@master
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.GH_TOKEN_GIT_COMMIT }}
+        with:
+          src: "proto/authcontrol.errors.ridl"
+          dst: "proto/"
+          branch: "update_authcontrol_errors"
+          repository: "0xsequence/quotacontrol"
+          pr_create: true
+          pr_base: "master"
