@@ -1,7 +1,7 @@
 name: copy-ridl-errors
 
 on:
-  push: #workflow_call:
+  workflow_call:
 
 jobs:
   copy-ridl-errors:
