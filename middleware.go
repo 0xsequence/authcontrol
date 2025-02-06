@@ -101,7 +101,7 @@ func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 				}
 
 				if !errors.Is(err, jwtauth.ErrNoTokenFound) {
-					cfg.ErrHandler(r, w, proto.ErrUnauthorized)
+					cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCause(err))
 					return
 				}
 			}
