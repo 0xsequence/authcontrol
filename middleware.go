@@ -223,9 +223,8 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 							slog.Uint64("project_id", uint64(projectClaim)),
 						)
 
-						// TODO: Uncomment once we're confident it won't disrupt major customers.
-						// cfg.ErrHandler(r, w, err)
-						// return
+						cfg.ErrHandler(r, w, err)
+						return
 					}
 				}
 			}
@@ -271,7 +270,7 @@ func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Ha
 }
 
 // PropagateAccessKey propagates the access key from the context to other webrpc packages.
-// It expectes the function `WithHTTPRequestHeaders` from the proto package that requires the access key propogation.
+// It expects the function `WithHTTPRequestHeaders` from the proto package that requires the access key propogation.
 func PropagateAccessKey(headerContextFuncs ...func(context.Context, http.Header) (context.Context, error)) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
