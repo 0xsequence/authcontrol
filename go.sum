@@ -6,8 +6,8 @@ github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 h1:rpfIENRNNilwHwZeG5+P150SMrnN
 github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0/go.mod h1:v57UDF4pDQJcEfFUCRop3lJL149eHGSe9Jvczhzjo/0=
 github.com/go-chi/chi/v5 v5.1.0 h1:acVI1TYaD+hhedDJ3r54HyA6sExp3HfXq7QWEEY/xMw=
 github.com/go-chi/chi/v5 v5.1.0/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
-github.com/go-chi/jwtauth/v5 v5.3.2 h1:s+ON3ATyyMs3Me0kqyuua6Rwu+2zqIIkL0GCaMarwvs=
-github.com/go-chi/jwtauth/v5 v5.3.2/go.mod h1:O4QvPRuZLZghl9WvfVaON+ARfGzpD2PBX/QY5vUz7aQ=
+github.com/go-chi/jwtauth/v5 v5.3.3 h1:50Uzmacu35/ZP9ER2Ht6SazwPsnLQ9LRJy6zTZJpHEo=
+github.com/go-chi/jwtauth/v5 v5.3.3/go.mod h1:O4QvPRuZLZghl9WvfVaON+ARfGzpD2PBX/QY5vUz7aQ=
 github.com/go-chi/traceid v0.2.0 h1:M4SVlzbnq6zfNCOvi8LwLFGugY04El+hS8njO0Pwml4=
 github.com/go-chi/traceid v0.2.0/go.mod h1:XFfEEYZjqgML4ySh+wYBU29eqJkc2um7oEzgIc63e74=
 github.com/go-chi/transport v0.4.0 h1:wKkHHapDbijGz7sGicEqyQIj6KD/LV5+R7H8QrZQMco=
