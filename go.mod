@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/go-chi/chi/v5 v5.1.0
-	github.com/go-chi/jwtauth/v5 v5.3.2
+	github.com/go-chi/jwtauth/v5 v5.3.3
 	github.com/go-chi/traceid v0.2.0
 	github.com/go-chi/transport v0.4.0
 	github.com/lestrrat-go/jwx/v2 v2.1.3
