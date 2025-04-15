@@ -1,9 +1,12 @@
 package authcontrol
 
 import (
+	"cmp"
 	"fmt"
 	"maps"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/traceid"
@@ -19,13 +22,15 @@ type S2SClientConfig struct {
 
 // Service-to-service HTTP client for internal communication between Sequence services.
 func S2SClient(cfg *S2SClientConfig) *http.Client {
+	serviceName := cmp.Or(cfg.Service, filepath.Base(os.Args[0]))
+
 	httpClient := &http.Client{
 		Transport: transport.Chain(http.DefaultTransport,
 			traceid.Transport,
-			transport.SetHeader("User-Agent", fmt.Sprintf("sequence/%s", cfg.Service)),
+			transport.SetHeader("User-Agent", fmt.Sprintf("sequence/%s", serviceName)),
 			transport.If(cfg.JWTSecret != "",
 				transport.SetHeaderFunc("Authorization", func(req *http.Request) string {
-					return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": cfg.Service})
+					return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": serviceName})
 				}),
 			),
 			transport.If(cfg.AccessKey != "",
