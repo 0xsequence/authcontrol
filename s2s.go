@@ -1,6 +1,7 @@
 package authcontrol
 
 import (
+	"fmt"
 	"maps"
 	"net/http"
 	"time"
@@ -12,6 +13,7 @@ import (
 type S2SClientConfig struct {
 	Service       string
 	JWTSecret     string
+	AccessKey     string
 	DebugRequests bool
 }
 
@@ -20,17 +22,24 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 	httpClient := &http.Client{
 		Transport: transport.Chain(http.DefaultTransport,
 			traceid.Transport,
-			transport.SetHeaderFunc("Authorization", func(req *http.Request) string {
-				return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": cfg.Service})
-			}),
-			transport.If(cfg.DebugRequests, transport.LogRequests(transport.LogOptions{Concise: true, CURL: true})),
+			transport.SetHeader("User-Agent", fmt.Sprintf("sequence/%s", cfg.Service)),
+			transport.If(cfg.JWTSecret != "",
+				transport.SetHeaderFunc("Authorization", func(req *http.Request) string {
+					return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": cfg.Service})
+				}),
+			),
+			transport.If(cfg.AccessKey != "",
+				transport.SetHeader("X-Access-Key", cfg.AccessKey),
+			),
+			transport.If(cfg.DebugRequests,
+				transport.LogRequests(transport.LogOptions{Concise: true, CURL: true}),
+			),
 		),
 	}
-
 	return httpClient
 }
 
-// Create short-lived service-to-service JWT token for internal communication between Sequence services.
+// Create a short-lived service-to-service JWT token for internal communication between Sequence services.
 func S2SToken(jwtSecret string, claims map[string]any) string {
 	jwtAuth, _ := NewAuth(jwtSecret).GetVerifier(nil)
 	now := time.Now().UTC()
