@@ -4,12 +4,13 @@ name = authcontrol
 version = v0.9.1
 
 enum SessionType: uint16
-  - Public            # Public access (anonymous)
-  - Wallet            # Wallet access (wallet signed proof to jwt)
-  - AccessKey         # API access via a project *public* X-Access-Key (no jwt)
-  - Project           # Project access via *private* jwt scoped for the project (jwt)
-  - User              # User-level access (jwt)
-  - Admin             # Admin-level access (jwt)
-  - InternalService   # Internal service-to-service access (jwt)
+  - Public    # Public access (anonymous)
+  - Wallet    # Wallet access (wallet signed proof to jwt)
+  - AccessKey # API access via a project *public* X-Access-Key (no jwt)
+  - Project   # Project access via *private* jwt scoped for the project (jwt)
+  - User      # User-level access (jwt)
+  - Admin     # Admin-level access (jwt)
+  - S2S       # Internal service-to-service access (jwt)
 
 import "./authcontrol.errors.ridl"
+
