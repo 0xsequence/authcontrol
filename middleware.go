@@ -1,13 +1,17 @@
 package authcontrol
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httplog/v3"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 
@@ -138,13 +142,17 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			ctx := r.Context()
 
 			// if a custom middleware already sets the session type, skip this middleware
-			if _, ok := GetSessionType(ctx); ok {
+			if sessionType, ok := GetSessionType(ctx); ok {
+				httplog.SetAttrs(ctx, slog.String("sessionType", sessionType.String()))
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			sessionType := proto.SessionType_Public
-			var accessKey string
+			var (
+				sessionType = proto.SessionType_Public
+				accessKey   string
+				projectID   uint64
+			)
 
 			for _, f := range cfg.AccessKeyFuncs {
 				if accessKey = f(r); accessKey != "" {
@@ -171,7 +179,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				switch {
 				case serviceClaim != "":
 					ctx = WithService(ctx, serviceClaim)
-					sessionType = proto.SessionType_InternalService
+					sessionType = proto.SessionType_S2S
 
 				case accountClaim != "":
 					ctx = WithAccount(ctx, accountClaim)
@@ -199,11 +207,16 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				}
 
 				if projectClaim > 0 {
-					ctx = WithProjectID(ctx, uint64(projectClaim))
+					projectID = uint64(projectClaim)
 					sessionType = max(sessionType, proto.SessionType_Project)
 				} else if projectIDClaim > 0 {
-					ctx = WithProjectID(ctx, uint64(projectIDClaim))
+					projectID = uint64(projectIDClaim)
 					sessionType = max(sessionType, proto.SessionType_Project)
+				}
+
+				if projectID > 0 {
+					ctx = WithProjectID(ctx, projectID)
+					httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
 				}
 
 				// Restrict CORS for Builder Admin API Secret Keys.
@@ -215,12 +228,12 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 
 					origin := r.Header.Get("Origin")
 					if origin != "" {
-						err := proto.ErrSecretKeyCorsDisallowed.WithCausef("project_id: %v", projectClaim)
+						err := proto.ErrSecretKeyCorsDisallowed.WithCausef("project_id: %v", projectID)
 
 						slog.ErrorContext(ctx, "CORS disallowed for Secret Key",
 							slog.Any("error", err),
 							slog.String("origin", origin),
-							slog.Uint64("project_id", uint64(projectClaim)),
+							slog.Uint64("project_id", projectID),
 						)
 
 						// TODO: Uncomment once we're confident it won't disrupt major customers.
@@ -236,7 +249,30 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			}
 
 			ctx = WithSessionType(ctx, sessionType)
-			next.ServeHTTP(w, r.WithContext(ctx))
+			httplog.SetAttrs(ctx, slog.String("sessionType", sessionType.String()))
+
+			ww, ok := w.(middleware.WrapResponseWriter)
+			if !ok {
+				ww = middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			}
+
+			defer func() {
+				// Track requests by session type.
+				sessionTypeCounter.Inc(sessionLabels{
+					SessionType: sessionType.String(),
+					Status:      strconv.Itoa(cmp.Or(ww.Status(), 200)),
+				})
+
+				// Track requests by project ID.
+				if projectID > 0 {
+					projectCounter.Inc(projectLabels{
+						ProjectID: strconv.FormatUint(projectID, 10),
+						Status:    strconv.Itoa(cmp.Or(ww.Status(), 200)),
+					})
+				}
+			}()
+
+			next.ServeHTTP(ww, r.WithContext(ctx))
 		})
 	}
 }
