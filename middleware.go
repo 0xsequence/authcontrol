@@ -141,111 +141,111 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			// if a custom middleware already sets the session type, skip this middleware
-			if sessionType, ok := GetSessionType(ctx); ok {
-				httplog.SetAttrs(ctx, slog.String("sessionType", sessionType.String()))
+			// If a custom middleware already sets the session type, skip this middleware.
+			// This happens only in various tests and in node-gateway's specialKeyMiddleware.
+			if _, ok := GetSessionType(ctx); ok {
+				// Track this as a SpecialKey session for now.
+				// TODO: Remove once node-gateway SpecialKey support is gone.
+				httplog.SetAttrs(ctx, slog.String("sessionType", "SpecialKey"))
+				requestsCounter.Inc(sessionLabels{SessionType: "SpecialKey"})
+
 				next.ServeHTTP(w, r)
+				return
+			}
+
+			_, claims, err := jwtauth.FromContext(ctx)
+			if err != nil || claims == nil {
+				cfg.ErrHandler(r, w, err)
 				return
 			}
 
 			var (
 				sessionType = proto.SessionType_Public
-				accessKey   string
 				projectID   uint64
 			)
 
+			serviceClaim, _ := claims["service"].(string)
+			accountClaim, _ := claims["account"].(string)
+			adminClaim, _ := claims["admin"].(bool)
+			projectClaim, _ := claims["project"].(float64)      // Builder Admin API Secret Keys
+			projectIDClaim, _ := claims["project_id"].(float64) // API->WaaS authentication
+
+			switch {
+			case serviceClaim != "":
+				sessionType = proto.SessionType_S2S
+				ctx = WithService(ctx, serviceClaim)
+				httplog.SetAttrs(ctx, slog.String("service", serviceClaim))
+
+			case accountClaim != "":
+				sessionType = proto.SessionType_Wallet
+				ctx = WithAccount(ctx, accountClaim)
+				httplog.SetAttrs(ctx, slog.String("account", accountClaim))
+
+				if cfg.UserStore != nil {
+					user, isAdmin, err := cfg.UserStore.GetUser(ctx, accountClaim)
+					if err != nil {
+						cfg.ErrHandler(r, w, err)
+						return
+					}
+
+					if user != nil {
+						ctx = WithUser(ctx, user)
+						sessionType = proto.SessionType_User
+						if isAdmin {
+							sessionType = proto.SessionType_Admin
+						}
+					}
+				}
+
+				if adminClaim {
+					sessionType = proto.SessionType_Admin
+				}
+
+			// `project` claim is used in Builder Admin API Secret Keys
+			case projectClaim > 0:
+				projectID = uint64(projectClaim)
+				sessionType = max(sessionType, proto.SessionType_Project)
+				ctx = WithProjectID(ctx, projectID)
+				httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
+
+			// `project_id` claim is used in API->WaaS authentication.
+			case projectIDClaim > 0:
+				projectID = uint64(projectIDClaim)
+				sessionType = max(sessionType, proto.SessionType_Project)
+				ctx = WithProjectID(ctx, projectID)
+				httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
+			}
+
+			// Restrict CORS for Builder Admin API Secret Keys.
+			// These keys are designed for backend service use by third-party customers, not for web apps.
+			if accountClaim != "" && projectClaim > 0 {
+				// Secret Keys are distinguished from Wallet JWTs or Builder session JWTs
+				// by the presence of both `project` and `account` claims. (As of Dec '24)
+				// Related discussion: https://github.com/0xsequence/issue-tracker/issues/3802.
+
+				origin := r.Header.Get("Origin")
+				if origin != "" {
+					err := proto.ErrSecretKeyCorsDisallowed.WithCausef("project_id: %v", projectID)
+
+					slog.ErrorContext(ctx, "CORS disallowed for Secret Key",
+						slog.Any("error", err),
+						slog.String("origin", origin),
+						slog.Uint64("project_id", projectID),
+					)
+
+					// TODO: Uncomment once we're confident it won't disrupt major customers.
+					// cfg.ErrHandler(r, w, err)
+					// return
+				}
+			}
+
+			var accessKey string
 			for _, f := range cfg.AccessKeyFuncs {
 				if accessKey = f(r); accessKey != "" {
+					ctx = WithAccessKey(ctx, accessKey)
+					sessionType = max(sessionType, proto.SessionType_AccessKey)
 					break
 				}
-			}
-
-			_, claims, err := jwtauth.FromContext(ctx)
-			if err != nil {
-				cfg.ErrHandler(r, w, err)
-				return
-			}
-			if claims != nil {
-				serviceClaim, _ := claims["service"].(string)
-				accountClaim, _ := claims["account"].(string)
-				adminClaim, _ := claims["admin"].(bool)
-
-				// - `project` claim is used in Builder Admin API Secret Keys (JWT used by third-party customers).
-				projectClaim, _ := claims["project"].(float64)
-
-				// - `project_id` claim is used by API->WaaS related authentication.
-				projectIDClaim, _ := claims["project_id"].(float64)
-
-				switch {
-				case serviceClaim != "":
-					ctx = WithService(ctx, serviceClaim)
-					sessionType = proto.SessionType_S2S
-
-				case accountClaim != "":
-					ctx = WithAccount(ctx, accountClaim)
-					sessionType = proto.SessionType_Wallet
-
-					if cfg.UserStore != nil {
-						user, isAdmin, err := cfg.UserStore.GetUser(ctx, accountClaim)
-						if err != nil {
-							cfg.ErrHandler(r, w, err)
-							return
-						}
-
-						if user != nil {
-							ctx = WithUser(ctx, user)
-							sessionType = proto.SessionType_User
-							if isAdmin {
-								sessionType = proto.SessionType_Admin
-							}
-						}
-					}
-
-					if adminClaim {
-						sessionType = proto.SessionType_Admin
-					}
-				}
-
-				if projectClaim > 0 {
-					projectID = uint64(projectClaim)
-					sessionType = max(sessionType, proto.SessionType_Project)
-				} else if projectIDClaim > 0 {
-					projectID = uint64(projectIDClaim)
-					sessionType = max(sessionType, proto.SessionType_Project)
-				}
-
-				if projectID > 0 {
-					ctx = WithProjectID(ctx, projectID)
-					httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
-				}
-
-				// Restrict CORS for Builder Admin API Secret Keys.
-				// These keys are designed for backend service use by third-party customers, not for web apps.
-				if accountClaim != "" && projectClaim > 0 {
-					// Secret Keys are distinguished from Wallet JWTs or Builder session JWTs
-					// by the presence of both `project` and `account` claims. (As of Dec '24)
-					// Related discussion: https://github.com/0xsequence/issue-tracker/issues/3802.
-
-					origin := r.Header.Get("Origin")
-					if origin != "" {
-						err := proto.ErrSecretKeyCorsDisallowed.WithCausef("project_id: %v", projectID)
-
-						slog.ErrorContext(ctx, "CORS disallowed for Secret Key",
-							slog.Any("error", err),
-							slog.String("origin", origin),
-							slog.Uint64("project_id", projectID),
-						)
-
-						// TODO: Uncomment once we're confident it won't disrupt major customers.
-						// cfg.ErrHandler(r, w, err)
-						// return
-					}
-				}
-			}
-
-			if accessKey != "" {
-				ctx = WithAccessKey(ctx, accessKey)
-				sessionType = max(sessionType, proto.SessionType_AccessKey)
 			}
 
 			ctx = WithSessionType(ctx, sessionType)
@@ -257,15 +257,22 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			}
 
 			defer func() {
-				// Track requests by session type.
-				sessionTypeCounter.Inc(sessionLabels{
+				// Track all requests by session type.
+				requestsCounter.Inc(sessionLabels{
 					SessionType: sessionType.String(),
-					Status:      strconv.Itoa(cmp.Or(ww.Status(), 200)),
+					RateLimited: strconv.FormatBool(ww.Status() == 429),
 				})
+
+				// Track internal S2S requests by service name.
+				if sessionType == proto.SessionType_S2S {
+					requestsServiceCounter.Inc(serviceLabels{
+						Service: serviceClaim,
+					})
+				}
 
 				// Track requests by project ID.
 				if projectID > 0 {
-					projectCounter.Inc(projectLabels{
+					requestsProjectCounter.Inc(projectLabels{
 						ProjectID: strconv.FormatUint(projectID, 10),
 						Status:    strconv.Itoa(cmp.Or(ww.Status(), 200)),
 					})
