@@ -2,19 +2,60 @@ package authcontrol
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"strings"
+
+	"crypto/rand"
+	"encoding/binary"
 
 	"github.com/goware/base64"
 	"github.com/jxskiss/base62"
 )
 
 var (
+	// SupportedEncodings is a list of supported encodings. If more versions of the same version are added, the first one will be used.
+	SupportedEncodings = []Encoding{V2{}, V1{}, V0{}}
+
+	DefaultEncoding Encoding = V1{}
+
 	ErrInvalidKeyLength = errors.New("invalid access key length")
 )
+
+func GetProjectIDFromAccessKey(accessKey string) (projectID uint64, err error) {
+	var errs []error
+	for _, e := range SupportedEncodings {
+		projectID, err := e.Decode(accessKey)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("decode v%d: %w", e.Version(), err))
+			continue
+		}
+		return projectID, nil
+	}
+	return 0, errors.Join(errs...)
+}
+
+func GenerateAccessKey(ctx context.Context, projectID uint64) string {
+	version, ok := GetVersion(ctx)
+	if !ok {
+		return DefaultEncoding.Encode(ctx, projectID)
+	}
+
+	for _, e := range SupportedEncodings {
+		if e.Version() == version {
+			return e.Encode(ctx, projectID)
+		}
+	}
+	return ""
+}
+
+func GetAccessKeyPrefix(accessKey string) string {
+	parts := strings.Split(accessKey, Separator)
+	if len(parts) < 2 {
+		return ""
+	}
+	return strings.Join(parts[:len(parts)-1], Separator)
+}
 
 type Encoding interface {
 	Version() byte
@@ -53,7 +94,7 @@ func (V0) Decode(accessKey string) (projectID uint64, err error) {
 }
 
 // V1: base64 encoded, 26-byte fixed length. 1 byte for version, 8 bytes for project ID, rest random.
-// Uses standard base64url encoding. Compatible with other systems.
+// Uses standard base64url  Compatible with other systems.
 type V1 struct{}
 
 func (V1) Version() byte { return 1 }
