@@ -22,6 +22,8 @@ var (
 	ctxKeyAccessKey   = &contextKey{"AccessKey"}
 	ctxKeyProjectID   = &contextKey{"ProjectID"}
 	ctxKeyProject     = &contextKey{"Project"}
+	ctxKeyPrefix      = &contextKey{"Prefix"}
+	ctxKeyVersion     = &contextKey{"Version"}
 )
 
 //
@@ -138,5 +140,31 @@ func withProject(ctx context.Context, project any) context.Context {
 // GetProject returns the project from the context.
 func GetProject[T any](ctx context.Context) (*T, bool) {
 	v, ok := ctx.Value(ctxKeyProject).(*T)
+	return v, ok
+}
+
+// Access Key
+
+// WithPrefix sets the prefix to the context.
+func WithPrefix(ctx context.Context, prefix string) context.Context {
+	return context.WithValue(ctx, ctxKeyPrefix, prefix)
+}
+
+// getPrefix returns the prefix from the context. If not set, it returns DefaultPrefix.
+func getPrefix(ctx context.Context) string {
+	if v, _ := ctx.Value(ctxKeyPrefix).(string); v != "" {
+		return v
+	}
+	return DefaultPrefix
+}
+
+// WithVersion sets the version to the context.
+func WithVersion(ctx context.Context, version byte) context.Context {
+	return context.WithValue(ctx, ctxKeyVersion, version)
+}
+
+// GetVersion returns the version from the context. If not set, it returns AccessKeyVersion.
+func GetVersion(ctx context.Context) (byte, bool) {
+	v, ok := ctx.Value(ctxKeyVersion).(byte)
 	return v, ok
 }
