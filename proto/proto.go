@@ -12,7 +12,3 @@ func (s SessionType) OrHigher() []SessionType {
 	}
 	return list
 }
-
-// Deprecated: Use SessionType_S2S instead.
-// Note: Remove this after some time.
-const SessionType_InternalService = SessionType_S2S

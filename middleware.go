@@ -252,10 +252,10 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 					sessionType = max(sessionType, proto.SessionType_AccessKey)
 
 					ctx = WithAccessKey(ctx, accessKey)
-					// TODO:
-					// projectID, _ = proto.GetProjectID(accessKey)
-					// ctx = withProjectIDy(ctx, projectID)
-					// httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
+
+					projectID, _ = GetProjectIDFromAccessKey(accessKey)
+					ctx = withProjectID(ctx, projectID)
+					httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
 					break
 				}
 			}
