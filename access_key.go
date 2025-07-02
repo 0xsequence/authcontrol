@@ -78,7 +78,7 @@ func (V0) Version() byte { return 0 }
 func (V0) Encode(_ context.Context, projectID uint64) string {
 	buf := make([]byte, sizeV0)
 	binary.BigEndian.PutUint64(buf, projectID)
-	rand.Read(buf[8:])
+	_, _ = rand.Read(buf[8:])
 	return base62.EncodeToString(buf)
 }
 
@@ -103,7 +103,7 @@ func (v V1) Encode(_ context.Context, projectID uint64) string {
 	buf := make([]byte, sizeV1)
 	buf[0] = v.Version()
 	binary.BigEndian.PutUint64(buf[1:], projectID)
-	rand.Read(buf[9:])
+	_, _ = rand.Read(buf[9:])
 	return base64.Base64UrlEncode(buf)
 }
 
@@ -133,7 +133,7 @@ func (v V2) Encode(ctx context.Context, projectID uint64) string {
 	buf := make([]byte, sizeV2)
 	buf[0] = v.Version()
 	binary.BigEndian.PutUint64(buf[1:], projectID)
-	rand.Read(buf[9:])
+	_, _ = rand.Read(buf[9:])
 	return getPrefix(ctx) + Separator + base64.Base64UrlEncode(buf)
 }
 
