@@ -86,7 +86,7 @@ func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 					if _auth != nil {
 						auth = _auth
 					}
-					ctx = WithProject(ctx, project)
+					ctx = withProject(ctx, project)
 				}
 
 			}
@@ -147,7 +147,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				// Track this as a SpecialKey session for now.
 				// TODO: Remove once node-gateway SpecialKey support is gone.
 				httplog.SetAttrs(ctx, slog.String("sessionType", "SpecialKey"))
-				requestsCounter.Inc(sessionLabels{SessionType: "SpecialKey"})
+				requestsCounter.Inc(sessionLabels{SessionType: "SpecialKey", RateLimited: "false"})
 
 				next.ServeHTTP(w, r)
 				return
@@ -164,20 +164,23 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				projectID   uint64
 			)
 
+			// Parse JWT claims.
 			serviceClaim, _ := claims["service"].(string)
 			accountClaim, _ := claims["account"].(string)
 			adminClaim, _ := claims["admin"].(bool)
 			projectClaim, _ := claims["project"].(float64)      // Builder Admin API Secret Keys
 			projectIDClaim, _ := claims["project_id"].(float64) // API->WaaS authentication
 
-			switch {
-			case serviceClaim != "":
+			if serviceClaim != "" {
 				sessionType = proto.SessionType_S2S
+
 				ctx = WithService(ctx, serviceClaim)
 				httplog.SetAttrs(ctx, slog.String("service", serviceClaim))
+			}
 
-			case accountClaim != "":
+			if accountClaim != "" {
 				sessionType = proto.SessionType_Wallet
+
 				ctx = WithAccount(ctx, accountClaim)
 				httplog.SetAttrs(ctx, slog.String("account", accountClaim))
 
@@ -200,19 +203,23 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				if adminClaim {
 					sessionType = proto.SessionType_Admin
 				}
+			}
 
 			// `project` claim is used in Builder Admin API Secret Keys
-			case projectClaim > 0:
-				projectID = uint64(projectClaim)
+			if projectClaim > 0 {
 				sessionType = max(sessionType, proto.SessionType_Project)
-				ctx = WithProjectID(ctx, projectID)
+
+				projectID = uint64(projectClaim)
+				ctx = withProjectID(ctx, projectID)
 				httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
+			}
 
 			// `project_id` claim is used in API->WaaS authentication.
-			case projectIDClaim > 0:
-				projectID = uint64(projectIDClaim)
+			if projectIDClaim > 0 {
 				sessionType = max(sessionType, proto.SessionType_Project)
-				ctx = WithProjectID(ctx, projectID)
+
+				projectID = uint64(projectIDClaim)
+				ctx = withProjectID(ctx, projectID)
 				httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
 			}
 
@@ -239,11 +246,16 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				}
 			}
 
-			var accessKey string
+			// Parse Access Key.
 			for _, f := range cfg.AccessKeyFuncs {
-				if accessKey = f(r); accessKey != "" {
-					ctx = WithAccessKey(ctx, accessKey)
+				if accessKey := f(r); accessKey != "" {
 					sessionType = max(sessionType, proto.SessionType_AccessKey)
+
+					ctx = WithAccessKey(ctx, accessKey)
+					// TODO:
+					// projectID, _ = proto.GetProjectID(accessKey)
+					// ctx = withProjectIDy(ctx, projectID)
+					// httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
 					break
 				}
 			}
