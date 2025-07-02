@@ -54,10 +54,10 @@ func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, pat
 	handler.ServeHTTP(rr, req.WithContext(ctx))
 
 	if status := rr.Result().StatusCode; status < http.StatusOK || status >= http.StatusBadRequest {
-		w := proto.WebRPCError{}
-		err = json.Unmarshal(rr.Body.Bytes(), &w)
-		require.NoError(t, err)
-		return false, w
+		webrpcErr := proto.WebRPCError{}
+		err = json.Unmarshal(rr.Body.Bytes(), &webrpcErr)
+		require.NoError(t, err, "failed to unmarshal response body: %s", rr.Body.Bytes())
+		return false, webrpcErr
 	}
 
 	return true, nil

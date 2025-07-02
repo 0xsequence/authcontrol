@@ -57,7 +57,7 @@ func TestSession(t *testing.T) {
 		MethodProject:   authcontrol.NewACL(proto.SessionType_Project.OrHigher()...),
 		MethodUser:      authcontrol.NewACL(proto.SessionType_User.OrHigher()...),
 		MethodAdmin:     authcontrol.NewACL(proto.SessionType_Admin.OrHigher()...),
-		MethodService:   authcontrol.NewACL(proto.SessionType_InternalService.OrHigher()...),
+		MethodService:   authcontrol.NewACL(proto.SessionType_S2S.OrHigher()...),
 	}}
 
 	const (
@@ -100,13 +100,13 @@ func TestSession(t *testing.T) {
 		{Session: proto.SessionType_User, Admin: true},
 		{Session: proto.SessionType_Admin},
 		{Session: proto.SessionType_Admin, AccessKey: AccessKey},
-		{Session: proto.SessionType_InternalService},
-		{Session: proto.SessionType_InternalService, AccessKey: AccessKey},
+		{Session: proto.SessionType_S2S},
+		{Session: proto.SessionType_S2S, AccessKey: AccessKey},
 	}
 
 	for service := range ACLConfig {
 		for _, method := range Methods {
-			types := ACLConfig[service][method]
+			expectedACL := ACLConfig[service][method]
 			for _, tc := range testCases {
 				s := strings.Builder{}
 				fmt.Fprintf(&s, "%s/%s", method, tc.Session)
@@ -131,7 +131,7 @@ func TestSession(t *testing.T) {
 						claims = map[string]any{"account": address}
 					case proto.SessionType_Admin:
 						claims = map[string]any{"account": WalletAddress, "admin": true}
-					case proto.SessionType_InternalService:
+					case proto.SessionType_S2S:
 						claims = map[string]any{"service": ServiceName}
 					}
 
@@ -143,8 +143,6 @@ func TestSession(t *testing.T) {
 						options = append(options, jwt(authcontrol.S2SToken(JWTSecret, claims)))
 					}
 
-					ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", service, method), options...)
-
 					session := tc.Session
 					switch {
 					case session == proto.SessionType_User && tc.Admin:
@@ -153,7 +151,8 @@ func TestSession(t *testing.T) {
 						session = proto.SessionType_AccessKey
 					}
 
-					if !types.Includes(session) {
+					ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", service, method), options...)
+					if !expectedACL.Includes(session) {
 						assert.Error(t, err)
 						assert.False(t, ok)
 						return
