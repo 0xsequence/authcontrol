@@ -114,10 +114,8 @@ func GetAccessKey(ctx context.Context) (string, bool) {
 // Project ID
 //
 
-// WithProjectID adds the project to the context.
-//
-// TODO: Deprecate this in favor of Session middleware with a JWT token.
-func WithProjectID(ctx context.Context, project uint64) context.Context {
+// withProjectID adds the project to the context.
+func withProjectID(ctx context.Context, project uint64) context.Context {
 	return context.WithValue(ctx, ctxKeyProjectID, project)
 }
 
@@ -132,10 +130,8 @@ func GetProjectID(ctx context.Context) (uint64, bool) {
 // Project
 //
 
-// WithProject adds the project to the context.
-//
-// TODO: Deprecate this in favor of Session middleware with a JWT token.
-func WithProject(ctx context.Context, project any) context.Context {
+// withProject adds the project to the context.
+func withProject(ctx context.Context, project any) context.Context {
 	return context.WithValue(ctx, ctxKeyProject, project)
 }
 
