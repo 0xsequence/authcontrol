@@ -24,6 +24,10 @@ var (
 
 type AccessKey string
 
+func (a AccessKey) String() string {
+	return string(a)
+}
+
 func (a AccessKey) GetProjectID() (projectID uint64, err error) {
 	var errs []error
 	for _, e := range SupportedEncodings {
@@ -52,7 +56,7 @@ func NewAccessKey(ctx context.Context, projectID uint64) AccessKey {
 }
 
 func GetAccessKeyPrefix(accessKey AccessKey) string {
-	parts := strings.Split(string(accessKey), Separator)
+	parts := strings.Split(accessKey.String(), Separator)
 	if len(parts) < 2 {
 		return ""
 	}
@@ -85,7 +89,7 @@ func (V0) Encode(_ context.Context, projectID uint64) AccessKey {
 }
 
 func (V0) Decode(accessKey AccessKey) (projectID uint64, err error) {
-	buf, err := base62.DecodeString(string(accessKey))
+	buf, err := base62.DecodeString(accessKey.String())
 	if err != nil {
 		return 0, fmt.Errorf("base62 decode: %w", err)
 	}
@@ -110,7 +114,7 @@ func (v V1) Encode(_ context.Context, projectID uint64) AccessKey {
 }
 
 func (V1) Decode(accessKey AccessKey) (projectID uint64, err error) {
-	buf, err := base64.Base64UrlDecode(string(accessKey))
+	buf, err := base64.Base64UrlDecode(accessKey.String())
 	if err != nil {
 		return 0, fmt.Errorf("base64 decode: %w", err)
 	}
@@ -140,7 +144,7 @@ func (v V2) Encode(ctx context.Context, projectID uint64) AccessKey {
 }
 
 func (V2) Decode(accessKey AccessKey) (projectID uint64, err error) {
-	parts := strings.Split(string(accessKey), Separator)
+	parts := strings.Split(accessKey.String(), Separator)
 	raw := parts[len(parts)-1]
 
 	buf, err := base64.Base64UrlDecode(raw)

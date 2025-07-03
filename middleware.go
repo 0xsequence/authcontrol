@@ -332,7 +332,7 @@ func PropagateAccessKey(headerContextFuncs ...func(context.Context, http.Header)
 
 			if accessKey, ok := GetAccessKey(ctx); ok {
 				h := http.Header{
-					HeaderAccessKey: []string{string(accessKey)},
+					HeaderAccessKey: []string{accessKey.String()},
 				}
 				for _, fn := range headerContextFuncs {
 					ctx, _ = fn(ctx, h)
