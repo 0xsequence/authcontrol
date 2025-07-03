@@ -251,7 +251,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 
 					ctx = WithAccessKey(ctx, accessKey)
 
-					projectID, _ = GetProjectIDFromAccessKey(accessKey)
+					projectID, _ = accessKey.GetProjectID()
 					ctx = withProjectID(ctx, projectID)
 					httplog.SetAttrs(ctx, slog.Uint64("projectId", projectID))
 					break
@@ -332,7 +332,7 @@ func PropagateAccessKey(headerContextFuncs ...func(context.Context, http.Header)
 
 			if accessKey, ok := GetAccessKey(ctx); ok {
 				h := http.Header{
-					HeaderAccessKey: []string{accessKey},
+					HeaderAccessKey: []string{string(accessKey)},
 				}
 				for _, fn := range headerContextFuncs {
 					ctx, _ = fn(ctx, h)
