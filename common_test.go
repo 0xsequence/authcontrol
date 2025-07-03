@@ -17,8 +17,8 @@ import (
 
 const HeaderKey = "Test-Key"
 
-func keyFunc(r *http.Request) string {
-	return r.Header.Get(HeaderKey)
+func keyFunc(r *http.Request) authcontrol.AccessKey {
+	return authcontrol.AccessKey(r.Header.Get(HeaderKey))
 }
 
 type requestOption func(r *http.Request)
