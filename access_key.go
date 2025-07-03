@@ -39,7 +39,7 @@ func (a AccessKey) GetProjectID() (projectID uint64, err error) {
 	return 0, errors.Join(errs...)
 }
 
-func GenerateAccessKey(ctx context.Context, projectID uint64) AccessKey {
+func NewAccessKey(ctx context.Context, projectID uint64) AccessKey {
 	version, ok := GetVersion(ctx)
 	if !ok {
 		return DefaultEncoding.Encode(ctx, projectID)
