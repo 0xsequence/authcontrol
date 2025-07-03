@@ -41,6 +41,14 @@ func (a AccessKey) GetProjectID() (projectID uint64, err error) {
 	return 0, errors.Join(errs...)
 }
 
+func (a AccessKey) GetPrefix() string {
+	parts := strings.Split(a.String(), Separator)
+	if len(parts) < 2 {
+		return ""
+	}
+	return strings.Join(parts[:len(parts)-1], Separator)
+}
+
 func NewAccessKey(ctx context.Context, projectID uint64) AccessKey {
 	version, ok := GetVersion(ctx)
 	if !ok {
@@ -53,14 +61,6 @@ func NewAccessKey(ctx context.Context, projectID uint64) AccessKey {
 		}
 	}
 	return ""
-}
-
-func GetAccessKeyPrefix(accessKey AccessKey) string {
-	parts := strings.Split(accessKey.String(), Separator)
-	if len(parts) < 2 {
-		return ""
-	}
-	return strings.Join(parts[:len(parts)-1], Separator)
 }
 
 type Encoding interface {
