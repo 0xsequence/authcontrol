@@ -22,10 +22,10 @@ const (
 	HeaderAccessKey = "X-Access-Key"
 )
 
-type AccessKeyFunc func(*http.Request) string
+type AccessKeyFunc func(*http.Request) AccessKey
 
-func AccessKeyFromHeader(r *http.Request) string {
-	return r.Header.Get(HeaderAccessKey)
+func AccessKeyFromHeader(r *http.Request) AccessKey {
+	return AccessKey(r.Header.Get(HeaderAccessKey))
 }
 
 type ErrHandler func(r *http.Request, w http.ResponseWriter, err error)

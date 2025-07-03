@@ -17,7 +17,7 @@ func TestAccessKeyEncoding(t *testing.T) {
 		accessKey := authcontrol.GenerateAccessKey(ctx, projectID)
 		t.Log("=> k", accessKey)
 
-		outID, err := authcontrol.GetProjectIDFromAccessKey(accessKey)
+		outID, err := accessKey.GetProjectID()
 		require.NoError(t, err)
 		require.Equal(t, projectID, outID)
 	})
@@ -27,7 +27,7 @@ func TestAccessKeyEncoding(t *testing.T) {
 		projectID := uint64(12345)
 		accessKey := authcontrol.GenerateAccessKey(ctx, projectID)
 		t.Log("=> k", accessKey)
-		outID, err := authcontrol.GetProjectIDFromAccessKey(accessKey)
+		outID, err := accessKey.GetProjectID()
 		require.NoError(t, err)
 		require.Equal(t, projectID, outID)
 	})
@@ -36,7 +36,7 @@ func TestAccessKeyEncoding(t *testing.T) {
 		projectID := uint64(12345)
 		accessKey := authcontrol.GenerateAccessKey(ctx, projectID)
 		t.Log("=> k", accessKey, "| prefix =>", authcontrol.GetAccessKeyPrefix(accessKey))
-		outID, err := authcontrol.GetProjectIDFromAccessKey(accessKey)
+		outID, err := accessKey.GetProjectID()
 		require.NoError(t, err)
 		require.Equal(t, projectID, outID)
 
@@ -44,11 +44,11 @@ func TestAccessKeyEncoding(t *testing.T) {
 
 		accessKey2 := authcontrol.GenerateAccessKey(ctx, projectID)
 		t.Log("=> k", accessKey2, "| prefix =>", authcontrol.GetAccessKeyPrefix(accessKey2))
-		outID, err = authcontrol.GetProjectIDFromAccessKey(accessKey2)
+		outID, err = accessKey2.GetProjectID()
 		require.NoError(t, err)
 		require.Equal(t, projectID, outID)
 		// retrocompatibility with the older prefix
-		outID, err = authcontrol.GetProjectIDFromAccessKey(accessKey)
+		outID, err = accessKey.GetProjectID()
 		require.NoError(t, err)
 		require.Equal(t, projectID, outID)
 	})
