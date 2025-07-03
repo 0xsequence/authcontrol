@@ -232,17 +232,15 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 
 				origin := r.Header.Get("Origin")
 				if origin != "" {
-					err := proto.ErrSecretKeyCorsDisallowed.WithCausef("project_id: %v", projectID)
-
-					slog.ErrorContext(ctx, "CORS disallowed for Secret Key",
+					slog.ErrorContext(ctx, "CORS disallowed for API Secret Key",
 						slog.Any("error", err),
 						slog.String("origin", origin),
 						slog.Uint64("project_id", projectID),
 					)
 
-					// TODO: Uncomment once we're confident it won't disrupt major customers.
-					// cfg.ErrHandler(r, w, err)
-					// return
+					err := proto.ErrSecretKeyCorsDisallowed.WithCausef("origin: %v, project_id: %v", origin, projectID)
+					cfg.ErrHandler(r, w, err)
+					return
 				}
 			}
 
@@ -326,7 +324,7 @@ func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Ha
 }
 
 // PropagateAccessKey propagates the access key from the context to other webrpc packages.
-// It expectes the function `WithHTTPRequestHeaders` from the proto package that requires the access key propogation.
+// It expects the function `WithHTTPRequestHeaders` from the proto package that requires the access key propogation.
 func PropagateAccessKey(headerContextFuncs ...func(context.Context, http.Header) (context.Context, error)) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
