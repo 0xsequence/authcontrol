@@ -14,6 +14,7 @@ import (
 
 	"github.com/0xsequence/authcontrol/proto"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/go-chi/transport"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
@@ -197,4 +198,17 @@ func findProjectClaim(r *http.Request) (uint64, error) {
 	default:
 		return 0, fmt.Errorf("invalid type: %T", val)
 	}
+}
+
+// ForwardAccessKeyTransport is a RoundTripper that forwards the access key from the request context to the request header.
+func ForwardAccessKeyTransport(next http.RoundTripper) http.RoundTripper {
+	return transport.RoundTripFunc(func(req *http.Request) (resp *http.Response, err error) {
+		r := transport.CloneRequest(req)
+
+		if accessKey, ok := GetAccessKey(req.Context()); ok {
+			r.Header.Set(HeaderAccessKey, accessKey.String())
+		}
+
+		return next.RoundTrip(r)
+	})
 }

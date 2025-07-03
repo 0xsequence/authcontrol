@@ -325,8 +325,7 @@ func TestCustomErrHandler(t *testing.T) {
 
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	var claims map[string]any
-	claims = map[string]any{"service": "client_service"}
+	claims := map[string]any{"service": "client_service"}
 
 	// Valid Request
 	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
