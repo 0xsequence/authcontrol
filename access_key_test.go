@@ -2,6 +2,8 @@ package authcontrol_test
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/0xsequence/authcontrol"
@@ -56,4 +58,35 @@ func TestDecode(t *testing.T) {
 	ctx := authcontrol.WithVersion(context.Background(), 2)
 	accessKey := authcontrol.GenerateAccessKey(ctx, 237)
 	t.Log("=> k", accessKey, "| prefix =>", authcontrol.GetAccessKeyPrefix(accessKey))
+}
+
+func TestForwardAccessKeyTransport(t *testing.T) {
+	// Create a test server that captures the request headers
+	var capturedHeaders http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedHeaders = r.Header.Clone()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	// Create context with access key
+	accessKey := "test-access-key-123"
+	ctx := authcontrol.WithAccessKey(context.Background(), accessKey)
+
+	// Create HTTP client with ForwardAccessKeyTransport
+	client := &http.Client{
+		Transport: authcontrol.ForwardAccessKeyTransport(http.DefaultTransport),
+	}
+
+	// Create request with the context
+	req, err := http.NewRequestWithContext(ctx, "GET", server.URL, nil)
+	require.NoError(t, err)
+
+	// Make the request
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Verify the access key header was set
+	require.Equal(t, accessKey, capturedHeaders.Get(authcontrol.HeaderAccessKey))
 }

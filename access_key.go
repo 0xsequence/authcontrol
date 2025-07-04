@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"crypto/rand"
 	"encoding/binary"
 
+	"github.com/go-chi/transport"
 	"github.com/goware/base64"
 	"github.com/jxskiss/base62"
 )
@@ -55,6 +57,18 @@ func GetAccessKeyPrefix(accessKey string) string {
 		return ""
 	}
 	return strings.Join(parts[:len(parts)-1], Separator)
+}
+
+func ForwardAccessKeyTransport(next http.RoundTripper) http.RoundTripper {
+	return transport.RoundTripFunc(func(req *http.Request) (resp *http.Response, err error) {
+		r := transport.CloneRequest(req)
+
+		if accessKey, ok := GetAccessKey(req.Context()); ok {
+			r.Header.Set(HeaderAccessKey, accessKey)
+		}
+
+		return next.RoundTrip(r)
+	})
 }
 
 type Encoding interface {
