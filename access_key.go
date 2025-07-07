@@ -49,18 +49,18 @@ func (a AccessKey) GetPrefix() string {
 	return strings.Join(parts[:len(parts)-1], Separator)
 }
 
-func NewAccessKey(ctx context.Context, projectID uint64) AccessKey {
+func NewAccessKey(ctx context.Context, projectID uint64) (AccessKey, bool) {
 	version, ok := GetVersion(ctx)
 	if !ok {
-		return DefaultEncoding.Encode(ctx, projectID)
+		return DefaultEncoding.Encode(ctx, projectID), true
 	}
 
 	for _, e := range SupportedEncodings {
 		if e.Version() == version {
-			return e.Encode(ctx, projectID)
+			return e.Encode(ctx, projectID), true
 		}
 	}
-	return ""
+	return "", false
 }
 
 type Encoding interface {
