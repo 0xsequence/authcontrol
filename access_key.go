@@ -51,7 +51,7 @@ func (a AccessKey) GetPrefix() string {
 
 var ErrUnsupportedEncoding = errors.New("unsupported access key encoding")
 
-func NewAccessKey(ctx context.Context, projectID uint64) (AccessKey, error) {
+func GenerateAccessKey(ctx context.Context, projectID uint64) (AccessKey, error) {
 	version, ok := GetVersion(ctx)
 	if !ok {
 		return DefaultEncoding.Encode(ctx, projectID), nil
