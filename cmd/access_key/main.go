@@ -28,7 +28,7 @@ var decodeCmd = &cobra.Command{
 		if len(args) != 1 {
 			return fmt.Errorf("access key is required")
 		}
-		accessKey := authcontrol.AccessKey(args[0])
+		accessKey := args[0]
 		var (
 			projectID uint64
 			version   byte
