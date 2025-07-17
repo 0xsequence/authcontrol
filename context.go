@@ -102,13 +102,13 @@ func GetService(ctx context.Context) (string, bool) {
 // WithAccessKey adds the access key to the context.
 //
 // TODO: Deprecate this in favor of Session middleware with a JWT token.
-func WithAccessKey(ctx context.Context, accessKey AccessKey) context.Context {
+func WithAccessKey(ctx context.Context, accessKey string) context.Context {
 	return context.WithValue(ctx, ctxKeyAccessKey, accessKey)
 }
 
 // GetAccessKey returns the access key from the context.
-func GetAccessKey(ctx context.Context) (AccessKey, bool) {
-	v, ok := ctx.Value(ctxKeyAccessKey).(AccessKey)
+func GetAccessKey(ctx context.Context) (string, bool) {
+	v, ok := ctx.Value(ctxKeyAccessKey).(string)
 	return v, ok
 }
 
