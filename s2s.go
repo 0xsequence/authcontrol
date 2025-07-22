@@ -14,13 +14,21 @@ import (
 )
 
 type S2SClientConfig struct {
-	Service       string
-	JWTSecret     string
-	AccessKey     string
+	// JWTToken is the static JWT token used for authentication.
+	JWTToken string
+	// JWTSecret is the secret key used to dynamically create JWT BEARER token for authorization.
+	JWTSecret string
+	// Service is used in the service claim of the JWT token.
+	Service string
+	// AccessKey is an optional access key used for authentication.
+	AccessKey string
+	// DebugRequests enables logging of HTTP requests.
 	DebugRequests bool
 }
 
 // Service-to-service HTTP client for internal communication between Sequence services.
+// If JWTSecret is provided, it will create a HS256 JWT token with the service name in the claims.
+// If both JWTSecret and JWTToken are provided, JWTToken will take precedence.
 func S2SClient(cfg *S2SClientConfig) *http.Client {
 	serviceName := cmp.Or(cfg.Service, filepath.Base(os.Args[0]))
 
@@ -32,6 +40,9 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 				transport.SetHeaderFunc("Authorization", func(req *http.Request) string {
 					return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": serviceName})
 				}),
+			),
+			transport.If(cfg.JWTToken != "",
+				transport.SetHeader("Authorization", "BEARER "+cfg.JWTToken),
 			),
 			transport.If(cfg.AccessKey != "",
 				transport.SetHeader("X-Access-Key", cfg.AccessKey),
