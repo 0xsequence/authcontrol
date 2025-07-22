@@ -14,15 +14,13 @@ import (
 )
 
 type S2SClientConfig struct {
-	// JWTToken is the static JWT token used for authentication.
-	JWTToken string
-	// JWTSecret is the secret key used to dynamically create JWT BEARER token for authorization.
-	JWTSecret string
-	// Service is used in the service claim of the JWT token.
+	// Service defines the "service" claim in the JWT token.
 	Service string
-	// AccessKey is an optional access key used for authentication.
-	AccessKey string
-	// DebugRequests enables logging of HTTP requests.
+	// JWTSecret is used to create dynamic JWT tokens for S2S auth.
+	JWTSecret string
+	// JWTToken is a static JWT token for S2S auth.
+	JWTToken string
+	// DebugRequests enables HTTP request logging.
 	DebugRequests bool
 }
 
@@ -43,9 +41,6 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 			),
 			transport.If(cfg.JWTToken != "",
 				transport.SetHeader("Authorization", "BEARER "+cfg.JWTToken),
-			),
-			transport.If(cfg.AccessKey != "",
-				transport.SetHeader("X-Access-Key", cfg.AccessKey),
 			),
 			transport.If(cfg.DebugRequests,
 				transport.LogRequests(transport.LogOptions{Concise: true, CURL: true}),
