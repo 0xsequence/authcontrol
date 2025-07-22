@@ -14,9 +14,15 @@ import (
 )
 
 type S2SClientConfig struct {
-	Service       string
-	JWTSecret     string
-	AccessKey     string
+	// JWTToken is the JWT token to use for authentication.
+	JWTToken string
+	// JWTSecret is the secret key used to create the JWT token.
+	JWTSecret string
+	// Service is used in the service claim of the JWT token.
+	Service string
+	// AccessKey is an optional access key to use for authentication.
+	AccessKey string
+	// DebugRequests enables logging of HTTP requests.
 	DebugRequests bool
 }
 
@@ -28,9 +34,13 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 		Transport: transport.Chain(http.DefaultTransport,
 			traceid.Transport,
 			transport.SetHeader("User-Agent", fmt.Sprintf("sequence/%s", serviceName)),
-			transport.If(cfg.JWTSecret != "",
+			transport.If(cfg.JWTSecret != "" || cfg.JWTToken != "",
 				transport.SetHeaderFunc("Authorization", func(req *http.Request) string {
-					return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": serviceName})
+					token := cfg.JWTToken
+					if token == "" {
+						token = S2SToken(cfg.JWTSecret, map[string]any{"service": serviceName})
+					}
+					return "BEARER " + token
 				}),
 			),
 			transport.If(cfg.AccessKey != "",
