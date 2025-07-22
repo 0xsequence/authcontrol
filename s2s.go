@@ -28,6 +28,7 @@ type S2SClientConfig struct {
 
 // Service-to-service HTTP client for internal communication between Sequence services.
 // If JWTSecret is provided, it will create a HS256 JWT token with the service name in the claims.
+// If both JWTSecret and JWTToken are provided, JWTToken will take precedence.
 func S2SClient(cfg *S2SClientConfig) *http.Client {
 	serviceName := cmp.Or(cfg.Service, filepath.Base(os.Args[0]))
 
