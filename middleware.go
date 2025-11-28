@@ -305,7 +305,7 @@ func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Ha
 			ctx := r.Context()
 			acl, err := acl.Get(ctx, r.URL.Path)
 			if err != nil {
-				cfg.ErrHandler(r, w, proto.ErrUnauthorized.WithCausef("get acl: %w", err))
+				cfg.ErrHandler(r, w, proto.ErrMethodNotFound)
 				return
 			}
 
