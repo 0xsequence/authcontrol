@@ -303,23 +303,25 @@ func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Ha
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			acl, err := acl.Get(ctx, r.URL.Path)
-			if err != nil {
-				cfg.ErrHandler(r, w, proto.ErrMethodNotFound)
+
+			acl, ok := acl.Get(ctx, r.URL.Path)
+			if !ok {
+				// no ACL defined -> delegate to the next handler
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			if session, _ := GetSessionType(ctx); !acl.Includes(session) {
-				err := proto.ErrPermissionDenied
-				if session == proto.SessionType_Public {
-					err = proto.ErrUnauthorized
-				}
-
-				cfg.ErrHandler(r, w, err)
+			session, _ := GetSessionType(ctx)
+			if acl.Includes(session) {
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			next.ServeHTTP(w, r)
+			err := proto.ErrUnauthorized
+			if session > proto.SessionType_Public {
+				err = proto.ErrPermissionDenied
+			}
+			cfg.ErrHandler(r, w, err)
 		})
 	}
 }
