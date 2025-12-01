@@ -232,25 +232,25 @@ func TestInvalid(t *testing.T) {
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
-	// Invalid request path with wrong not enough parts in path for valid RPC request
+	// Invalid request path with wrong not enough parts in path for valid RPC request, this will delegate to next handler and return no error
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
-	assert.False(t, ok)
-	assert.ErrorIs(t, err, proto.ErrUnauthorized)
+	assert.True(t, ok)
+	assert.NoError(t, err)
 
-	// Invalid request path with wrong "rpc"
+	// Invalid request path with wrong "rpc", this will delegate to next handler and return no error
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/pcr/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
-	assert.False(t, ok)
-	assert.ErrorIs(t, err, proto.ErrUnauthorized)
+	assert.True(t, ok)
+	assert.NoError(t, err)
 
-	// Invalid Service
+	// Invalid Service, this will delegate to next handler and return no error
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
-	assert.False(t, ok)
-	assert.ErrorIs(t, err, proto.ErrUnauthorized)
+	assert.True(t, ok)
+	assert.NoError(t, err)
 
-	// Invalid Method
+	// Invalid Method, this will delegate to next handler and return no error
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
-	assert.False(t, ok)
-	assert.ErrorIs(t, err, proto.ErrUnauthorized)
+	assert.True(t, ok)
+	assert.NoError(t, err)
 
 	// Expired JWT Token
 	claims["exp"] = time.Now().Add(-5 * time.Minute).Unix() // Note: Session() middleware allows some skew.
@@ -283,7 +283,7 @@ func TestCustomErrHandler(t *testing.T) {
 
 	ACLConfig := authcontrol.Config[authcontrol.ACL]{
 		ServiceName: {
-			MethodName: authcontrol.NewACL(proto.SessionType_Public.OrHigher()...),
+			MethodName: authcontrol.NewACL(proto.SessionType_AccessKey.OrHigher()...),
 		},
 	}
 
@@ -325,16 +325,15 @@ func TestCustomErrHandler(t *testing.T) {
 
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	var claims map[string]any
-	claims = map[string]any{"service": "client_service"}
+	claims := map[string]any{"service": "client_service"}
 
 	// Valid Request
 	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
-	// Invalid service which should return custom error from overrided ErrHandler
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	// Invalid Access, should return custom error
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, customErr)
 }

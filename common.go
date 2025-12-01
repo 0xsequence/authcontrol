@@ -61,14 +61,14 @@ type ProjectStore interface {
 type Config[T any] map[string]map[string]T
 
 // Get returns the config value for the given request.
-func (c Config[T]) Get(_ context.Context, path string) (v T, err error) {
+func (c Config[T]) Get(_ context.Context, path string) (v T, ok bool) {
 	if c == nil {
-		return v, fmt.Errorf("config is nil")
+		return v, false
 	}
 
 	p := strings.Split(path, "/")
 	if len(p) < 4 {
-		return v, fmt.Errorf("path has not enough parts: %s", path)
+		return v, false
 	}
 
 	var (
@@ -78,15 +78,14 @@ func (c Config[T]) Get(_ context.Context, path string) (v T, err error) {
 	)
 
 	if packageName != "rpc" {
-		return v, fmt.Errorf("path doesn't include rpc: %s", path)
+		return v, false
 	}
 
-	v, ok := c[serviceName][methodName]
-	if !ok {
-		return v, fmt.Errorf("acl not defined for path: %s", path)
+	if v, ok = c[serviceName][methodName]; !ok {
+		return v, false
 	}
 
-	return v, nil
+	return v, true
 }
 
 // Verify checks that the given config is valid for the given service.
