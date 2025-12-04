@@ -185,7 +185,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				httplog.SetAttrs(ctx, slog.String("account", accountClaim))
 
 				if cfg.UserStore != nil {
-					user, isAdmin, err := cfg.UserStore.GetUser(ctx, accountClaim)
+					user, isAdmin, err := cfg.UserStore.GetUser(context.WithValue(ctx, proto.HTTPRequestCtxKey, r), accountClaim)
 					if err != nil {
 						cfg.ErrHandler(r, w, err)
 						return
