@@ -146,9 +146,9 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			if _, ok := GetSessionType(ctx); ok {
 				// Track this as a SpecialKey session for now.
 				// TODO: Remove once node-gateway SpecialKey support is gone.
+				w.Header().Set(HeaderSessionType, "SpecialKey")
 				httplog.SetAttrs(ctx, slog.String("sessionType", "SpecialKey"))
 				requestsCounter.Inc(sessionLabels{SessionType: "SpecialKey", RateLimited: "false"})
-
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -260,6 +260,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			}
 
 			ctx = WithSessionType(ctx, sessionType)
+			w.Header().Set(HeaderSessionType, sessionType.String())
 			httplog.SetAttrs(ctx, slog.String("sessionType", sessionType.String()))
 
 			ww, ok := w.(middleware.WrapResponseWriter)
