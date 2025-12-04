@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	HeaderAccessKey = "X-Access-Key"
+	HeaderAccessKey   = "X-Access-Key"
+	HeaderSessionType = "Session-Type"
 )
 
 type AccessKeyFunc func(*http.Request) string
