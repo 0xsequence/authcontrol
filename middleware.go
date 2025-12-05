@@ -20,6 +20,10 @@ import (
 
 // Options for the authcontrol middleware handlers Session and AccessControl.
 type Options struct {
+	// ServiceName is the name of the service using the middleware.
+	// It is used to validate the `scope` claim for admin sessions.
+	ServiceName string
+
 	// JWTsecret is required, and it is used for the JWT verification.
 	// If a Project Store is also provided and the request has a project claim,
 	// it could be replaced by the a specific verifier.
@@ -41,6 +45,11 @@ type Options struct {
 }
 
 func (o *Options) ApplyDefaults() {
+	// Ensure a ServiceName is set, or else set to unknown to break scope.
+	if o.ServiceName == "" {
+		o.ServiceName = "!UNKNOWN!"
+	}
+
 	// Set default access key functions if not provided.
 	// We intentionally check for nil instead of len == 0 because
 	// if you can pass an empty slice to have no access key defaults.
@@ -170,6 +179,7 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 			adminClaim, _ := claims["admin"].(bool)
 			projectClaim, _ := claims["project"].(float64)      // Builder Admin API Secret Keys
 			projectIDClaim, _ := claims["project_id"].(float64) // API->WaaS authentication
+			scopeClaim, _ := claims["scope"].(string)           // use for additional context, ie. admin scope to specific service
 
 			if serviceClaim != "" {
 				sessionType = proto.SessionType_S2S
@@ -201,7 +211,13 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				}
 
 				if adminClaim {
-					sessionType = proto.SessionType_Admin
+					if scopeClaim == "" || scopeClaim == cfg.ServiceName || strings.Contains(scopeClaim, cfg.ServiceName) {
+						// Allow admin if no scope claim is provided or if it matches service name.
+						sessionType = proto.SessionType_Admin
+					} else {
+						// Reduce to public if scope claim does not match.
+						sessionType = proto.SessionType_Public
+					}
 				}
 			}
 
