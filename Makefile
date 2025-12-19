@@ -1,4 +1,5 @@
 TEST_FLAGS ?= -p 8 -failfast -race -shuffle on
+GOTOOLCHAIN := $(shell cat go.mod | grep "^go" | tr -d ' ')
 
 all:
 	@echo "make <cmd>:"
@@ -22,11 +23,11 @@ test-coverage-inspect: test-coverage
 	go tool cover -html=coverage.out
 
 generate:
-	go generate -x ./...
+	GOTOOLCHAIN=$(GOTOOLCHAIN) go generate -x ./...
 
 .PHONY: proto
 proto:
-	go generate -x ./proto/...
+	GOTOOLCHAIN=$(GOTOOLCHAIN) go generate -x ./proto/...
 
 lint:
 	golangci-lint run ./... --fix -c .golangci.yml
