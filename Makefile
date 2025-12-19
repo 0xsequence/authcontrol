@@ -1,4 +1,5 @@
 TEST_FLAGS ?= -p 8 -failfast -race -shuffle on
+GOTOOLCHAIN := $(shell cat go.mod | grep "^go" | tr -d ' ')
 
 all:
 	@echo "make <cmd>:"
@@ -22,11 +23,10 @@ test-coverage-inspect: test-coverage
 	go tool cover -html=coverage.out
 
 generate:
-	go generate -x ./...
+	WEBRPC_SCHEMA_VERSION=$(shell git log -1 --date=format:'v0-%y.%-m.%-d' --format='%ad+%h' ./proto/*.ridl) \
+	GOTOOLCHAIN=$(GOTOOLCHAIN) go generate -x ./...
 
-.PHONY: proto
-proto:
-	go generate -x ./proto/...
+proto: generate
 
 lint:
 	golangci-lint run ./... --fix -c .golangci.yml
