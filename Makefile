@@ -23,11 +23,10 @@ test-coverage-inspect: test-coverage
 	go tool cover -html=coverage.out
 
 generate:
+	WEBRPC_SCHEMA_VERSION=$(shell git log -1 --date=format:'v0-%y.%-m.%-d' --format='%ad+%h' ./proto/*.ridl) \
 	GOTOOLCHAIN=$(GOTOOLCHAIN) go generate -x ./...
 
-.PHONY: proto
-proto:
-	GOTOOLCHAIN=$(GOTOOLCHAIN) go generate -x ./proto/...
+proto: generate
 
 lint:
 	golangci-lint run ./... --fix -c .golangci.yml
