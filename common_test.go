@@ -41,7 +41,7 @@ func origin(v string) requestOption {
 	}
 }
 
-func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, path string, options ...requestOption) (bool, http.Header, error) {
+func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, path string, options ...requestOption) (bool, error) {
 	req, err := http.NewRequest("POST", path, nil)
 	require.NoError(t, err)
 
@@ -57,10 +57,10 @@ func executeRequest(t *testing.T, ctx context.Context, handler http.Handler, pat
 		webrpcErr := proto.WebRPCError{}
 		err = json.Unmarshal(rr.Body.Bytes(), &webrpcErr)
 		require.NoError(t, err, "failed to unmarshal response body: %s", rr.Body.Bytes())
-		return false, rr.Header(), webrpcErr
+		return false, webrpcErr
 	}
 
-	return true, rr.Header(), nil
+	return true, nil
 }
 
 func TestVerify(t *testing.T) {
