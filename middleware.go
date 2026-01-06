@@ -212,11 +212,11 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				}
 
 				if adminClaim {
-					sessionType = proto.SessionType_Admin
-					// Reduce to public if a scope is provided and the claim does not match.
 					if scopeClaim != "" && !slices.Contains(strings.Split(scopeClaim, ","), cfg.ServiceName) {
-						sessionType = proto.SessionType_Public
+						cfg.ErrHandler(r, w, proto.ErrInvalidScope)
+						return
 					}
+					sessionType = proto.SessionType_Admin
 				}
 			}
 
