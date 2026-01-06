@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -211,13 +212,11 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 				}
 
 				if adminClaim {
-					if scopeClaim == "" || scopeClaim == cfg.ServiceName || strings.Contains(scopeClaim, cfg.ServiceName) {
-						// Allow admin if no scope claim is provided or if it matches service name.
-						sessionType = proto.SessionType_Admin
-					} else {
-						// Reduce to public if scope claim does not match.
-						sessionType = proto.SessionType_Public
+					if scopeClaim != "" && !slices.Contains(strings.Split(scopeClaim, ","), cfg.ServiceName) {
+						cfg.ErrHandler(r, w, proto.ErrInvalidScope)
+						return
 					}
+					sessionType = proto.SessionType_Admin
 				}
 			}
 

@@ -196,6 +196,7 @@ func TestInvalid(t *testing.T) {
 			AdminAddress: true,
 		},
 		AccessKeyFuncs: []authcontrol.AccessKeyFunc{keyFunc},
+		ServiceName:    ServiceName,
 	}
 
 	r := chi.NewRouter()
@@ -227,7 +228,7 @@ func TestInvalid(t *testing.T) {
 
 	claims := map[string]any{"service": "client_service"}
 
-	// Valid Request
+	// Valid S2S Request
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
@@ -270,6 +271,30 @@ func TestInvalid(t *testing.T) {
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), accessKey(AccessKey), jwt(expiredJWT))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrSessionExpired)
+
+	// Valid Admin Request (no scope claim)
+	claims = map[string]any{"account": AdminAddress, "admin": true}
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	assert.True(t, ok)
+	assert.NoError(t, err)
+
+	// Valid Admin Request (with matching scope claim)
+	claims = map[string]any{"account": AdminAddress, "admin": true, "scope": ServiceName}
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	assert.True(t, ok)
+	assert.NoError(t, err)
+
+	// Valid Admin Request (with multiple scope claims)
+	claims = map[string]any{"account": AdminAddress, "admin": true, "scope": ServiceName + ",other_service"}
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	assert.True(t, ok)
+	assert.NoError(t, err)
+
+	// Invalid Admin Request (with non-matching scope claim)
+	claims = map[string]any{"account": AdminAddress, "admin": true, "scope": "other_service"}
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	assert.False(t, ok)
+	assert.ErrorIs(t, err, proto.ErrInvalidScope)
 }
 
 func TestCustomErrHandler(t *testing.T) {
