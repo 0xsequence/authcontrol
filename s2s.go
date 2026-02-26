@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/traceid"
 	"github.com/go-chi/transport"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 )
 
 type S2SClientConfig struct {
@@ -54,7 +55,7 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 func S2SToken(o Options, claims map[string]any) string {
 	auth := o.Auth
 	if auth == nil {
-		auth = NewAuth(o.JWTSecret)
+		auth = &Auth{Algorithm: jwa.HS256, Private: []byte(o.JWTSecret)}
 	}
 
 	jwtAuth, _ := auth.GetVerifier(nil)

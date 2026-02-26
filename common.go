@@ -130,11 +130,6 @@ func (t ACL) Includes(session proto.SessionType) bool {
 	return t&ACL(1<<session) != 0
 }
 
-// NewAuth creates a new Auth HS256 with the given secret.
-func NewAuth(secret string) *Auth {
-	return &Auth{Algorithm: jwa.HS256, Private: []byte(secret)}
-}
-
 // Auth is a struct that holds the private and public keys for JWT signing and verification.
 type Auth struct {
 	Algorithm jwa.SignatureAlgorithm
@@ -145,7 +140,7 @@ type Auth struct {
 // GetVerifier returns a JWTAuth using the private secret when available, otherwise the public key
 func (a Auth) GetVerifier(options ...jwt.ValidateOption) (*jwtauth.JWTAuth, error) {
 	if a.Algorithm == "" {
-		return nil, fmt.Errorf("missing algorithm")
+		a.Algorithm = jwa.HS256
 	}
 
 	if a.Private != nil {

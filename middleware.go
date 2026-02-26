@@ -26,6 +26,8 @@ type Options struct {
 	ServiceName string
 
 	// JWTSecret is used to create the default Auth (HS256) when Auth is not provided.
+	//
+	// Deprecated: Use Auth: Auth{Private: []byte(Secret)} instead.
 	JWTSecret string
 
 	// Auth is the JWT verifier. If not provided, it is created from JWTSecret.
@@ -68,7 +70,7 @@ func (o *Options) ApplyDefaults() {
 
 	// Create default Auth from JWTSecret if not provided
 	if o.Auth == nil {
-		o.Auth = NewAuth(o.JWTSecret)
+		o.Auth = &Auth{Private: []byte(o.JWTSecret)}
 	}
 }
 

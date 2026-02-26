@@ -422,7 +422,7 @@ func TestProjectVerifier(t *testing.T) {
 
 	projectID := uint64(7)
 
-	authStore[projectID] = authcontrol.NewAuth(JWTSecret)
+	authStore[projectID] = &authcontrol.Auth{Private: []byte(JWTSecret)}
 
 	token := authcontrol.S2SToken(authcontrol.Options{JWTSecret: JWTSecret}, map[string]any{
 		"project_id": projectID,
