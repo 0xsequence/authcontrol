@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/goware/rerun v0.0.9
 	github.com/webrpc/webrpc v0.22.1
+	github.com/mfridman/tparse v0.18.0
 )
 
 require (

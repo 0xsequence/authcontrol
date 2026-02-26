@@ -11,13 +11,13 @@ test-clean:
 	go clean -testcache
 
 test: test-clean
-	go test -run=$(TEST) $(TEST_FLAGS) -json ./... | tparse --all --follow
+	go test -run=$(TEST) $(TEST_FLAGS) -json ./... | go run github.com/mfridman/tparse --all --follow
 
 test-rerun: test-clean
 	go run github.com/goware/rerun/cmd/rerun -watch ./ -run 'make test'
 
 test-coverage:
-	go test -run=$(TEST) $(TEST_FLAGS) -cover -coverprofile=coverage.out -json ./... | tparse --all --follow
+	go test -run=$(TEST) $(TEST_FLAGS) -cover -coverprofile=coverage.out -json ./... | go run github.com/mfridman/tparse --all --follow
 
 test-coverage-inspect: test-coverage
 	go tool cover -html=coverage.out
