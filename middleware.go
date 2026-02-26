@@ -25,13 +25,16 @@ type Options struct {
 	// It is used to validate the `scope` claim for admin sessions.
 	ServiceName string
 
-	// JWTsecret is required, and it is used for the JWT verification.
-	// If a Project Store is also provided and the request has a project claim,
-	// it could be replaced by the a specific verifier.
+	// JWTSecret is used to create the default Auth (HS256) when Auth is not provided.
 	JWTSecret string
 
-	// ProjectStore is a pluggable backends that verifies if the project from the claim exists.
-	// When provived, it checks the Project from the JWT, and can override the JWT Auth.
+	// Auth is the JWT verifier. If not provided, it is created from JWTSecret.
+	// If a ProjectStore is also provided and the request has a project claim,
+	// it can be overridden by a project-specific Auth.
+	Auth *Auth
+
+	// ProjectStore is a pluggable backend that verifies if the project from the claim exists.
+	// When provided, it checks the Project from the JWT, and can override the JWT Auth.
 	ProjectStore ProjectStore
 
 	// AccessKeyFuncs are used to extract the access key from the request.
@@ -62,6 +65,11 @@ func (o *Options) ApplyDefaults() {
 	if o.ErrHandler == nil {
 		o.ErrHandler = errHandler
 	}
+
+	// Create default Auth from JWTSecret if not provided
+	if o.Auth == nil {
+		o.Auth = NewAuth(o.JWTSecret)
+	}
 }
 
 func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
@@ -74,7 +82,7 @@ func VerifyToken(cfg Options) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			auth := NewAuth(cfg.JWTSecret)
+			auth := cfg.Auth
 
 			if cfg.ProjectStore != nil {
 				projectID, err := findProjectClaim(r)

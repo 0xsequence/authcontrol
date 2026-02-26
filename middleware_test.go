@@ -458,3 +458,53 @@ func TestProjectVerifier(t *testing.T) {
 	assert.True(t, ok)
 	assert.NoError(t, err)
 }
+
+func TestAsymmetricAuth(t *testing.T) {
+	ctx := context.Background()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	publicRaw, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err)
+
+	public := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PUBLIC KEY",
+		Bytes: publicRaw,
+	})
+
+	opts := authcontrol.Options{
+		Auth: &authcontrol.Auth{
+			Algorithm: "RS256",
+			Public:    public,
+		},
+	}
+
+	r := chi.NewRouter()
+	r.Use(authcontrol.VerifyToken(opts))
+	r.Use(authcontrol.Session(opts))
+	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+	// Valid token signed with the private key
+	_, token, err := jwtauth.New("RS256", privateKey, nil).Encode(map[string]any{
+		"service": "test-service",
+	})
+	require.NoError(t, err)
+
+	ok, err := executeRequest(t, ctx, r, "", jwt(token))
+	assert.True(t, ok)
+	assert.NoError(t, err)
+
+	// Token signed with a different private key should be rejected
+	otherKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	_, wrongToken, err := jwtauth.New("RS256", otherKey, nil).Encode(map[string]any{
+		"service": "test-service",
+	})
+	require.NoError(t, err)
+
+	ok, err = executeRequest(t, ctx, r, "", jwt(wrongToken))
+	assert.False(t, ok)
+	assert.ErrorIs(t, err, proto.ErrUnauthorized)
+}
