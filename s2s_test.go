@@ -12,7 +12,7 @@ import (
 )
 
 func TestS2SToken(t *testing.T) {
-	token := authcontrol.S2SToken(JWTSecret, map[string]any{"service": "test"})
+	token := authcontrol.S2SToken(authcontrol.Options{JWTSecret: JWTSecret},map[string]any{"service": "test"})
 
 	auth := jwtauth.New("HS256", []byte(JWTSecret), nil)
 

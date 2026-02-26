@@ -36,7 +36,7 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 			transport.SetHeader("User-Agent", fmt.Sprintf("sequence/%s", serviceName)),
 			transport.If(cfg.JWTSecret != "",
 				transport.SetHeaderFunc("Authorization", func(req *http.Request) string {
-					return "BEARER " + S2SToken(cfg.JWTSecret, map[string]any{"service": serviceName})
+					return "BEARER " + S2SToken(Options{JWTSecret: cfg.JWTSecret}, map[string]any{"service": serviceName})
 				}),
 			),
 			transport.If(cfg.JWTToken != "",
@@ -51,8 +51,13 @@ func S2SClient(cfg *S2SClientConfig) *http.Client {
 }
 
 // Create a short-lived service-to-service JWT token for internal communication between Sequence services.
-func S2SToken(jwtSecret string, claims map[string]any) string {
-	jwtAuth, _ := NewAuth(jwtSecret).GetVerifier(nil)
+func S2SToken(o Options, claims map[string]any) string {
+	auth := o.Auth
+	if auth == nil {
+		auth = NewAuth(o.JWTSecret)
+	}
+
+	jwtAuth, _ := auth.GetVerifier(nil)
 	now := time.Now().UTC()
 
 	c := maps.Clone(claims)

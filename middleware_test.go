@@ -140,7 +140,7 @@ func TestSession(t *testing.T) {
 						options = append(options, accessKey(tc.AccessKey))
 					}
 					if claims != nil {
-						options = append(options, jwt(authcontrol.S2SToken(JWTSecret, claims)))
+						options = append(options, jwt(authcontrol.S2SToken(authcontrol.Options{JWTSecret: JWTSecret}, claims)))
 					}
 
 					session := tc.Session
@@ -229,33 +229,33 @@ func TestInvalid(t *testing.T) {
 	claims := map[string]any{"service": "client_service"}
 
 	// Valid S2S Request
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid request path with wrong not enough parts in path for valid RPC request, this will delegate to next handler and return no error
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid request path with wrong "rpc", this will delegate to next handler and return no error
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/pcr/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/pcr/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid Service, this will delegate to next handler and return no error
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceNameInvalid, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid Method, this will delegate to next handler and return no error
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodNameInvalid), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Expired JWT Token
 	claims["exp"] = time.Now().Add(-5 * time.Minute).Unix() // Note: Session() middleware allows some skew.
-	expiredJWT := authcontrol.S2SToken(JWTSecret, claims)
+	expiredJWT := authcontrol.S2SToken(options, claims)
 
 	// Expired JWT Token valid method
 	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(expiredJWT))
@@ -274,25 +274,25 @@ func TestInvalid(t *testing.T) {
 
 	// Valid Admin Request (no scope claim)
 	claims = map[string]any{"account": AdminAddress, "admin": true}
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Valid Admin Request (with matching scope claim)
 	claims = map[string]any{"account": AdminAddress, "admin": true, "scope": ServiceName}
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Valid Admin Request (with multiple scope claims)
 	claims = map[string]any{"account": AdminAddress, "admin": true, "scope": ServiceName + ",other_service"}
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
 	// Invalid Admin Request (with non-matching scope claim)
 	claims = map[string]any{"account": AdminAddress, "admin": true, "scope": "other_service"}
-	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err = executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(options, claims)))
 	assert.False(t, ok)
 	assert.ErrorIs(t, err, proto.ErrInvalidScope)
 }
@@ -353,7 +353,7 @@ func TestCustomErrHandler(t *testing.T) {
 	claims := map[string]any{"service": "client_service"}
 
 	// Valid Request
-	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(JWTSecret, claims)))
+	ok, err := executeRequest(t, ctx, r, fmt.Sprintf("/rpc/%s/%s", ServiceName, MethodName), accessKey(AccessKey), jwt(authcontrol.S2SToken(authcontrol.Options{JWTSecret: JWTSecret}, claims)))
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
@@ -375,7 +375,7 @@ func TestOrigin(t *testing.T) {
 	r.Use(authcontrol.Session(opts))
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	token := authcontrol.S2SToken(JWTSecret, map[string]any{
+	token := authcontrol.S2SToken(authcontrol.Options{JWTSecret: JWTSecret}, map[string]any{
 		"user": "123",
 		"ogn":  "http://localhost",
 	})
@@ -424,7 +424,7 @@ func TestProjectVerifier(t *testing.T) {
 
 	authStore[projectID] = authcontrol.NewAuth(JWTSecret)
 
-	token := authcontrol.S2SToken(JWTSecret, map[string]any{
+	token := authcontrol.S2SToken(authcontrol.Options{JWTSecret: JWTSecret}, map[string]any{
 		"project_id": projectID,
 	})
 
