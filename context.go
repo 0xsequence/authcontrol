@@ -106,6 +106,13 @@ func WithAccessKey(ctx context.Context, accessKey string) context.Context {
 	return context.WithValue(ctx, ctxKeyAccessKey, accessKey)
 }
 
+// RemoveAccessKey removes the access key from the context.
+//
+// TODO: Deprecate this in favor of Session middleware with a JWT token, and remove this function.
+func RemoveAccessKey(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ctxKeyAccessKey, nil)
+}
+
 // GetAccessKey returns the access key from the context.
 func GetAccessKey(ctx context.Context) (string, bool) {
 	v, ok := ctx.Value(ctxKeyAccessKey).(string)
