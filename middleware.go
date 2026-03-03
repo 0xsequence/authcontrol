@@ -321,9 +321,13 @@ func Session(cfg Options) func(next http.Handler) http.Handler {
 	}
 }
 
+type ACL interface {
+	Get(ctx context.Context, path string) (proto.SessionTypes, bool)
+}
+
 // AccessControl middleware that checks if the session type is allowed to access the endpoint.
 // It also sets the compute units on the context if the endpoint requires it.
-func AccessControl(acl Config[ACL], cfg Options) func(next http.Handler) http.Handler {
+func AccessControl(acl ACL, cfg Options) func(next http.Handler) http.Handler {
 	cfg.ApplyDefaults()
 
 	return func(next http.Handler) http.Handler {

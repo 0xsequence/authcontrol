@@ -76,14 +76,14 @@ func TestVerify(t *testing.T) {
 	}
 
 	// Valid ACL config
-	acl := authcontrol.Config[any]{
+	acl := authcontrol.Config[proto.SessionTypes]{
 		"Service1": {
-			"Method1": authcontrol.NewACL(proto.SessionType_User),
-			"Method2": authcontrol.NewACL(proto.SessionType_User),
-			"Method3": authcontrol.NewACL(proto.SessionType_User),
+			"Method1": proto.NewSessionTypes(proto.SessionType_User),
+			"Method2": proto.NewSessionTypes(proto.SessionType_User),
+			"Method3": proto.NewSessionTypes(proto.SessionType_User),
 		},
 		"Service2": {
-			"Method1": authcontrol.NewACL(proto.SessionType_User),
+			"Method1": proto.NewSessionTypes(proto.SessionType_User),
 		},
 	}
 
@@ -91,14 +91,14 @@ func TestVerify(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Wrong Service
-	acl = authcontrol.Config[any]{
+	acl = authcontrol.Config[proto.SessionTypes]{
 		"WrongService1": {
-			"Method1": authcontrol.NewACL(proto.SessionType_User),
-			"Method2": authcontrol.NewACL(proto.SessionType_User),
-			"Method3": authcontrol.NewACL(proto.SessionType_User),
+			"Method1": proto.NewSessionTypes(proto.SessionType_User),
+			"Method2": proto.NewSessionTypes(proto.SessionType_User),
+			"Method3": proto.NewSessionTypes(proto.SessionType_User),
 		},
 		"Service2": {
-			"Method1": authcontrol.NewACL(proto.SessionType_User),
+			"Method1": proto.NewSessionTypes(proto.SessionType_User),
 		},
 	}
 
@@ -113,12 +113,12 @@ func TestVerify(t *testing.T) {
 	assert.Equal(t, errors.Join(expectedErrors...).Error(), err.Error())
 
 	// Wrong Methods
-	acl = authcontrol.Config[any]{
+	acl = authcontrol.Config[proto.SessionTypes]{
 		"Service1": {
-			"Method1": authcontrol.NewACL(proto.SessionType_User),
+			"Method1": proto.NewSessionTypes(proto.SessionType_User),
 		},
 		"Service2": {
-			"Method1": authcontrol.NewACL(proto.SessionType_User),
+			"Method1": proto.NewSessionTypes(proto.SessionType_User),
 		},
 	}
 

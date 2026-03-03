@@ -50,14 +50,14 @@ func TestSession(t *testing.T) {
 
 	Methods := []string{MethodPublic, MethodAccount, MethodAccessKey, MethodProject, MethodUser, MethodAdmin, MethodService}
 
-	ACLConfig := authcontrol.Config[authcontrol.ACL]{"Service": {
-		MethodPublic:    authcontrol.NewACL(proto.SessionType_Public.OrHigher()...),
-		MethodAccount:   authcontrol.NewACL(proto.SessionType_Wallet.OrHigher()...),
-		MethodAccessKey: authcontrol.NewACL(proto.SessionType_AccessKey.OrHigher()...),
-		MethodProject:   authcontrol.NewACL(proto.SessionType_Project.OrHigher()...),
-		MethodUser:      authcontrol.NewACL(proto.SessionType_User.OrHigher()...),
-		MethodAdmin:     authcontrol.NewACL(proto.SessionType_Admin.OrHigher()...),
-		MethodService:   authcontrol.NewACL(proto.SessionType_S2S.OrHigher()...),
+	ACLConfig := authcontrol.Config[proto.SessionTypes]{"Service": {
+		MethodPublic:    proto.SessionType_Public.OrHigher(),
+		MethodAccount:   proto.SessionType_Wallet.OrHigher(),
+		MethodAccessKey: proto.SessionType_AccessKey.OrHigher(),
+		MethodProject:   proto.SessionType_Project.OrHigher(),
+		MethodUser:      proto.SessionType_User.OrHigher(),
+		MethodAdmin:     proto.SessionType_Admin.OrHigher(),
+		MethodService:   proto.SessionType_S2S.OrHigher(),
 	}}
 
 	const (
@@ -175,9 +175,9 @@ func TestInvalid(t *testing.T) {
 		ServiceNameInvalid = ServiceName + "a"
 	)
 
-	ACLConfig := authcontrol.Config[authcontrol.ACL]{
+	ACLConfig := authcontrol.Config[proto.SessionTypes]{
 		ServiceName: {
-			MethodName: authcontrol.NewACL(proto.SessionType_Public.OrHigher()...),
+			MethodName: proto.SessionType_Public.OrHigher(),
 		},
 	}
 
@@ -306,9 +306,9 @@ func TestCustomErrHandler(t *testing.T) {
 		ServiceNameInvalid = ServiceName + "a"
 	)
 
-	ACLConfig := authcontrol.Config[authcontrol.ACL]{
+	ACLConfig := authcontrol.Config[proto.SessionTypes]{
 		ServiceName: {
-			MethodName: authcontrol.NewACL(proto.SessionType_AccessKey.OrHigher()...),
+			MethodName: proto.SessionType_AccessKey.OrHigher(),
 		},
 	}
 

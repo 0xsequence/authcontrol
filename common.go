@@ -104,32 +104,6 @@ func (c Config[any]) Verify(webrpcServices map[string][]string) error {
 	return errors.Join(errList...)
 }
 
-// ACL is a list of session types, encoded as a bitfield.
-// SessionType(n) is represented by n=-the bit.
-type ACL uint64
-
-// NewACL returns a new ACL with the given session types.
-func NewACL(sessions ...proto.SessionType) ACL {
-	var acl ACL
-	for _, v := range sessions {
-		acl = acl.And(v)
-	}
-	return acl
-}
-
-// And returns a new ACL with the given session types added.
-func (a ACL) And(session ...proto.SessionType) ACL {
-	for _, v := range session {
-		a |= 1 << v
-	}
-	return a
-}
-
-// Includes returns true if the ACL includes the given session type.
-func (t ACL) Includes(session proto.SessionType) bool {
-	return t&ACL(1<<session) != 0
-}
-
 // Auth is a struct that holds the private and public keys for JWT signing and verification.
 type Auth struct {
 	Algorithm jwa.SignatureAlgorithm
