@@ -1,66 +1,48 @@
-linters:
-  # Disable all linters.
-  disable-all: true
-  # Enable specific linter
-  enable:
-    - errcheck
-    - wrapcheck
-    - ineffassign
-    - unused
-
+version: "2"
 run:
-  # Number of operating system threads (`GOMAXPROCS`) that can execute golangci-lint simultaneously.
-  # If it is explicitly set to 0 (i.e. not the default) then golangci-lint will automatically set the value to match Linux container CPU quota.
-  # Default: the number of logical CPUs in the machine
   concurrency: 8
-  # Timeout for analysis, e.g. 30s, 5m.
-  # Default: 1m
-  timeout: 5m
-  go: "1.22.0"
-
+  go: 1.22.0
 output:
-  # Show statistics per linter.
-  show-stats: true
-  # Sort results by the order defined in `sort-order`.
-  sort-results: true
-  # Order to use when sorting results.
-  # Require `sort-results` to `true`.
-  # Possible values: `file`, `linter`, and `severity`.
-  #
-  # If the severity values are inside the following list, they are ordered in this order:
-  #   1. error
-  #   2. warning
-  #   3. high
-  #   4. medium
-  #   5. low
-  # Either they are sorted alphabetically.
   sort-order:
     - linter
     - file
     - severity
-
+linters:
+  default: none
+  enable:
+    - errcheck
+    - ineffassign
+    - unused
+    - wrapcheck
+  settings:
+    errcheck:
+      exclude-functions:
+        - (net/http.ResponseWriter).Write
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - lll
+        source: '^//go:generate '
+    paths:
+      - .*\.gen\.go$
+      - .*\.ridl$
+      - tools
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  # Maximum issues count per one linter.
-  # Set to 0 to disable.
-  # Default: 50
   max-issues-per-linter: 0
-  # Maximum count of issues with the same text.
-  # Set to 0 to disable.
-  # Default: 3
   max-same-issues: 0
-  exclude-rules:
-    - linters:
-        - lll
-      source: "^//go:generate "
-  exclude-dirs:
-    - "tools"
-  exclude-files:
-    - ".*\\.gen\\.go$"
-    - ".*\\.ridl$"
-
-linters-settings:
-  errcheck:
-    # List of functions to exclude from checking, where each entry is a single function to exclude.
-    # See https://github.com/kisielk/errcheck#excluding-functions for details.
-    exclude-functions:
-      - (net/http.ResponseWriter).Write
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
