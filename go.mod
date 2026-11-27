@@ -1,9 +1,9 @@
 module github.com/0xsequence/authcontrol
 
-go 1.23.2
+go 1.24
 
 require (
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/go-chi/httplog/v3 v3.2.2
 	github.com/go-chi/jwtauth/v5 v5.3.3
 	github.com/go-chi/metrics v0.1.0

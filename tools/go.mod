@@ -1,6 +1,6 @@
 module tools
 
-go 1.21
+go 1.24
 
 require (
 	github.com/goware/rerun v0.0.9
@@ -24,6 +24,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
 	github.com/golang-cz/textcase v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -44,6 +45,7 @@ require (
 	github.com/shurcooL/httpfs v0.0.0-20230704072500-f1e31cf0ba5c // indirect
 	github.com/skeema/knownhosts v1.2.2 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/webrpc/gen-dart v0.1.1 // indirect
 	github.com/webrpc/gen-golang v0.17.0 // indirect
 	github.com/webrpc/gen-javascript v0.13.0 // indirect
@@ -53,10 +55,10 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/net v0.29.0 // indirect
-	golang.org/x/oauth2 v0.23.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
